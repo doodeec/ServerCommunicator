@@ -5,7 +5,7 @@ Simple server communicator for RESTful data source
 TBD
 
 ### License
-Released under Apache v2 License
+Released under Apache v2.0 License
 
 ### Author
 Dusan Bartos<br/>
