@@ -1,4 +1,6 @@
-package com.doodeec.scom;
+package com.doodeec.scom.listener;
+
+import com.doodeec.scom.RequestError;
 
 /**
  * Created by Dusan Bartos on 29.12.2014.

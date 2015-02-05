@@ -7,6 +7,7 @@ import android.os.AsyncTask;
  *
  * Simplified interface for allowing server request to be cancelled
  */
+@SuppressWarnings("unused")
 public interface CancellableServerRequest {
 
     /**

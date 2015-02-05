@@ -5,6 +5,7 @@ package com.doodeec.scom;
  *
  * Server request error
  */
+@SuppressWarnings("unused")
 public class RequestError {
 
     private Exception mException;
