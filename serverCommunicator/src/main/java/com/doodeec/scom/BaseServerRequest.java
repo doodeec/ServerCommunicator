@@ -137,6 +137,11 @@ public abstract class BaseServerRequest<ReturnType> extends
         mRequestHeaders.clear();
     }
 
+    /**
+     * Can be used to define default headers for the class
+     *
+     * @see #BaseServerRequest(RequestType, com.doodeec.scom.listener.BaseRequestListener)
+     */
     protected void initHeaders() {
 
     }

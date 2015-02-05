@@ -16,3 +16,56 @@ android {
         }
     }
 }
+
+/**
+ * moves the JDK dependency after jUnit to make JUnit usable
+ * JDK uses its own JUnit, which can be old, so ours JUnit have to
+ * be loaded before JDK's
+ */
+task enableJUnit {
+    def file = file("${project.name}.iml")
+
+    println "enabling JUnit"
+
+    doLast {
+        def parsedXml = (new XmlParser()).parse(file)
+        def node = parsedXml.component[1]
+        def jdk = node.find { it.@type == "jdk" }
+
+        // remove first, it can be wrongly configured
+        if (jdk != null) {
+            // remove original node
+            jdk.parent().remove(jdk)
+
+            // add node to the end
+            new Node(node, 'orderEntry', ['type': "jdk", 'jdkType': jdk.@jdkType, 'jdkName': jdk.@jdkName])
+            def writer = new StringWriter()
+            new XmlNodePrinter(new PrintWriter(writer)).print(parsedXml)
+            file.text = writer.toString()
+        }
+    }
+}
+
+task copyTestResources(type: Copy) {
+    from "${buildDir}/intermediates/classes/test/debug"
+    into "${buildDir}/intermediates/classes/debug"
+}
+
+/**
+ * Copies aar file to library folder
+ */
+task copyLibraryFile(type: Copy) {
+    from "${buildDir}/outputs/aar/${project.name}-release.aar"
+    into "${rootDir}/library/"
+    rename ("${project.name}-release.aar", "${project.name}-${android.defaultConfig.versionName}.aar")
+}
+
+/**
+ * builds library .aar file and copies it to library folder
+ */
+task buildLibrary(dependsOn: ['assemble', 'copyLibraryFile']) {
+}
+
+dependencies {
+    androidTestCompile 'junit:junit:4.12'
+}
