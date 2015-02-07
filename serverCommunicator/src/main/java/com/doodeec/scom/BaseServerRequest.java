@@ -15,7 +15,10 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 /**
  * @author dusan.bartos
@@ -23,8 +26,6 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public abstract class BaseServerRequest<ReturnType> extends
         AsyncTask<String, Integer, ReturnType> implements CancellableServerRequest {
-
-    protected static final String UTF_8 = HTTP.UTF_8;
 
     // asyncTask progress
     private static final int PROGRESS_IDLE = 0;
@@ -39,9 +40,10 @@ public abstract class BaseServerRequest<ReturnType> extends
 
     // response headers
     protected static final String REQ_CHARSET_KEY = "Accept-Charset";
-    protected static final String REQ_CHARSET_VALUE = UTF_8;
     protected static final String REQ_ENCODING_KEY = "Accept-Encoding";
     protected static final String REQ_ENCODING_VALUE = "gzip";
+
+    private static final String ENCODING_KEY = "Content-Encoding";
 
     public static enum RequestType {
         GET("GET"),
@@ -74,7 +76,7 @@ public abstract class BaseServerRequest<ReturnType> extends
     /**
      * Additional request headers
      */
-    protected Map<String, String> mRequestHeaders = null;
+    protected Map<String, String> mRequestHeaders = new HashMap<>();
 
     /**
      * Request type
@@ -177,7 +179,7 @@ public abstract class BaseServerRequest<ReturnType> extends
         connection.setReadTimeout(mTimeout);
 
         // set connection header properties
-        connection.setRequestProperty(REQ_CHARSET_KEY, REQ_CHARSET_VALUE);
+        connection.setRequestProperty(REQ_CHARSET_KEY, HTTP.UTF_8);
         connection.setRequestProperty(REQ_ENCODING_KEY, REQ_ENCODING_VALUE);
 
         // set additional request headers
@@ -203,7 +205,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
             // append post data if available
             if (mPostData != null) {
-                byte[] outputInBytes = mPostData.getBytes(UTF_8);
+                byte[] outputInBytes = mPostData.getBytes(HTTP.UTF_8);
                 OutputStream os = connection.getOutputStream();
                 os.write(outputInBytes);
                 os.close();
@@ -243,6 +245,18 @@ public abstract class BaseServerRequest<ReturnType> extends
                     return null;
                 }
 
+                // handle gzipped input stream
+                Map<String, List<String>> headers = connection.getHeaderFields();
+                List<String> contentEncodings = headers.get(HTTP.CONTENT_ENCODING);
+                if (contentEncodings != null) {
+                    for (String header : contentEncodings) {
+                        if (header.equalsIgnoreCase(REQ_ENCODING_VALUE)) {
+                            inputStream = new GZIPInputStream(inputStream);
+                            break;
+                        }
+                    }
+                }
+
                 decodedResponseData = processInputStream(connection.getContentType(), inputStream);
             } finally {
                 publishProgress(PROGRESS_CONNECTION_CLOSE);
@@ -256,7 +270,6 @@ public abstract class BaseServerRequest<ReturnType> extends
                 connection.disconnect();
                 return null;
             }
-            //TODO handle GZIPped input stream
         } catch (ConnectException e) {
             // connect exception, server not responding
             mRequestError = new RequestError("Server not responding");
