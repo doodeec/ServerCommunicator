@@ -313,7 +313,7 @@ public abstract class BaseServerRequest<ReturnType> extends
      * @param params params
      * @return asyncTask
      */
-    public ServerRequest executeInParallel(String... params) {
-        return (ServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+    public BaseServerRequest executeInParallel(String... params) {
+        return (BaseServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
     }
 }
