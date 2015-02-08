@@ -280,7 +280,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             return null;
         } catch (IOException e) {
             // io exception
-            mRequestError = new RequestError("IO exception");
+            mRequestError = new RequestError(e);
             return null;
         } finally {
             publishProgress(PROGRESS_DISCONNECTING);
