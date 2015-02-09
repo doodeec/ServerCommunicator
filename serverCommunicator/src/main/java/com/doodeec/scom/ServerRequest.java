@@ -11,16 +11,14 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Created by Dusan Doodeec Bartos on 20.12.2014.
- *
  * Backend Server request
  * Wrapper around {@link java.net.HttpURLConnection}
  * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
+ * @author dusan.bartos
  * @see com.doodeec.scom.listener.JSONRequestListener
  * @see com.doodeec.scom.RequestError
  */
-@SuppressWarnings("unused")
 public class ServerRequest extends BaseServerRequest<String> {
 
     // response headers

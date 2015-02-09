@@ -21,9 +21,11 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
+ * Abstract base which is common for both {@link com.doodeec.scom.ServerRequest}
+ * and {@link com.doodeec.scom.ImageServerRequest}
+ *
  * @author dusan.bartos
  */
-@SuppressWarnings("unused")
 public abstract class BaseServerRequest<ReturnType> extends
         AsyncTask<String, Integer, ReturnType> implements CancellableServerRequest {
 
@@ -43,8 +45,10 @@ public abstract class BaseServerRequest<ReturnType> extends
     protected static final String REQ_ENCODING_KEY = "Accept-Encoding";
     protected static final String REQ_ENCODING_VALUE = "gzip";
 
-    private static final String ENCODING_KEY = "Content-Encoding";
-
+    /**
+     * Request type enum
+     * GET | POST | PUT | DELETE
+     */
     public static enum RequestType {
         GET("GET"),
         POST("POST"),
@@ -63,12 +67,13 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
-     * Post data to add to request body
+     * Post data to add to request body (payload)
      */
     protected String mPostData;
 
     /**
      * Connection timeout
+     * in milliseconds
      * default to 30sec
      */
     protected int mTimeout = 30000;
@@ -101,6 +106,12 @@ public abstract class BaseServerRequest<ReturnType> extends
      */
     protected RequestError mRequestError;
 
+    /**
+     * Constructs basic Server Request without body data (i.e. GET request)
+     *
+     * @param type     request type
+     * @param listener listener
+     */
     protected BaseServerRequest(RequestType type, BaseRequestListener listener) {
         mType = type;
         mListener = listener;
@@ -108,6 +119,13 @@ public abstract class BaseServerRequest<ReturnType> extends
         initHeaders();
     }
 
+    /**
+     * Constructs Server Request with POST payload
+     *
+     * @param type     request type
+     * @param data     post data
+     * @param listener listener
+     */
     protected BaseServerRequest(RequestType type, String data, BaseRequestListener listener) {
         this(type, listener);
         mPostData = data;
@@ -140,7 +158,7 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
-     * Can be used to define default headers for the class
+     * Can be used (overridden in request implementation) to define default headers for the class
      *
      * @see #BaseServerRequest(RequestType, com.doodeec.scom.listener.BaseRequestListener)
      */
@@ -152,8 +170,8 @@ public abstract class BaseServerRequest<ReturnType> extends
     protected ReturnType doInBackground(String... params) {
         URL url;
         HttpURLConnection connection;
-        String response;
 
+        // progress 0%
         publishProgress(PROGRESS_IDLE);
 
         try {
@@ -172,6 +190,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             return null;
         }
 
+        // progress 10%
         publishProgress(PROGRESS_OPENED);
 
         // set connection timeouts
@@ -201,6 +220,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
         try {
             connection.connect();
+            // progress 20%
             publishProgress(PROGRESS_CONNECTED);
 
             // append post data if available
@@ -218,6 +238,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             }
 
             int status = connection.getResponseCode();
+            // progress 40%
             publishProgress(PROGRESS_RESPONSE_CODE);
 
             if (status != HttpURLConnection.HTTP_OK) {
@@ -232,11 +253,13 @@ public abstract class BaseServerRequest<ReturnType> extends
                 return null;
             }
 
+            // progress 50%
             publishProgress(PROGRESS_RESPONSE_TYPE);
 
             InputStream inputStream = null;
             try {
                 inputStream = connection.getInputStream();
+                // progress 70%
                 publishProgress(PROGRESS_CONTENT);
 
                 // Checking for cancelled flag in major thread breakpoints
@@ -259,6 +282,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
                 decodedResponseData = processInputStream(connection.getContentType(), inputStream);
             } finally {
+                // progress 80%
                 publishProgress(PROGRESS_CONNECTION_CLOSE);
                 if (inputStream != null) {
                     inputStream.close();
@@ -283,14 +307,23 @@ public abstract class BaseServerRequest<ReturnType> extends
             mRequestError = new RequestError(e);
             return null;
         } finally {
+            // progress 90%
             publishProgress(PROGRESS_DISCONNECTING);
             connection.disconnect();
+            // progress 100%
             publishProgress(PROGRESS_DONE);
         }
 
         return decodedResponseData;
     }
 
+    /**
+     * Processes input stream to defined generic object type
+     *
+     * @param contentType content type from response headers
+     * @param inputStream input stream to be processed
+     * @return generic object
+     */
     protected abstract ReturnType processInputStream(String contentType, InputStream inputStream);
 
     @Override

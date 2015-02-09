@@ -1,13 +1,15 @@
 package com.doodeec.scom.listener;
 
 /**
- * Created by Dusan Doodeec Bartos on 21.12.2014.
- *
  * Response listener
  * Intended to be used in network service, when request listener is processed from raw data to
  * typed data
+ *
+ * The difference with {@link com.doodeec.scom.listener.SimpleResponseListener} is that this
+ * interface declares also Cancel and Progress event listeners
+ *
+ * @author dusan.bartos
  */
-@SuppressWarnings("unused")
 public interface ResponseListener<ResponseType> extends SimpleResponseListener<ResponseType> {
 
     /**

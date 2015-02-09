@@ -3,9 +3,9 @@ package com.doodeec.scom;
 import android.os.AsyncTask;
 
 /**
- * Created by Dusan Doodeec Bartos on 21.12.2014.
- *
  * Simplified interface for allowing server request to be cancelled
+ *
+ * @author dusan.bartos
  */
 @SuppressWarnings("unused")
 public interface CancellableServerRequest {

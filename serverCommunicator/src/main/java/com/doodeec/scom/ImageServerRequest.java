@@ -9,16 +9,15 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 /**
- * @author dusan.bartos
+ * Backend Server request for Image resource
+ * Wrapper around {@link java.net.HttpURLConnection}
+ * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
- *         Backend Server request for Image resource
- *         Wrapper around {@link java.net.HttpURLConnection}
- *         Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
+ * @author dusan.bartos
  * @see com.doodeec.scom.BaseServerRequest
  * @see com.doodeec.scom.listener.JSONRequestListener
  * @see RequestError
  */
-@SuppressWarnings("unused")
 public class ImageServerRequest extends BaseServerRequest<Bitmap> {
 
     // response types

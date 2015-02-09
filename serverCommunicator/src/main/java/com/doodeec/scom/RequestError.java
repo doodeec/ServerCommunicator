@@ -1,11 +1,10 @@
 package com.doodeec.scom;
 
 /**
- * Created by Dusan Doodeec Bartos on 21.12.2014.
- *
  * Server request error
+ *
+ * @author dusan.bartos
  */
-@SuppressWarnings("unused")
 public class RequestError {
 
     private Exception mException;

@@ -3,6 +3,8 @@ package com.doodeec.scom.listener;
 import com.doodeec.scom.RequestError;
 
 /**
+ * Base generic Request listener called by {@link com.doodeec.scom.BaseServerRequest}
+ *
  * @author dusan.bartos
  */
 public interface BaseRequestListener<ResponseType> {
