@@ -66,6 +66,24 @@ task copyLibraryFile(type: Copy) {
 task buildLibrary(dependsOn: ['assemble', 'copyLibraryFile']) {
 }
 
+apply plugin: 'maven'
+task generatePom << {
+    pom {
+        project {
+            version android.defaultConfig.versionName
+            groupId "com.doodeec.utils"
+            packaging "aar"
+            licenses {
+                license {
+                    name 'The Apache Software License, Version 2.0'
+                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+        }
+    }.writeTo("$buildDir/${project.name}.pom")
+}
+
 dependencies {
     androidTestCompile 'junit:junit:4.12'
 }
