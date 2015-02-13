@@ -81,7 +81,7 @@ task generatePom << {
                 }
             }
         }
-    }.writeTo("$buildDir/${project.name}.pom")
+    }.writeTo("$buildDir/${project.name}-${android.defaultConfig.versionName}.pom")
 }
 
 dependencies {
