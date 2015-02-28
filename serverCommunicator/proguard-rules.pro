@@ -15,3 +15,36 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-keep class com.doodeec.scom.BaseServerRequest {
+    public *;
+}
+-keep class com.doodeec.scom.RequestType {
+    public *;
+}
+-keep class com.doodeec.scom.CancellableServerRequest {
+    public *;
+}
+-keep class com.doodeec.scom.ErrorType {
+    public *;
+}
+-keep class com.doodeec.scom.ImageServerRequest {
+    public *;
+}
+-keep class com.doodeec.scom.RequestError {
+    public *;
+}
+-keep class com.doodeec.scom.ServerRequest {
+    public *;
+}
+-keep class com.doodeec.scom.listener.BaseRequestListener {
+    public *;
+}
+-keep class com.doodeec.scom.listener.JSONRequestListener {
+    public *;
+}
+-keep class com.doodeec.scom.listener.ResponseListener {
+    public *;
+}
+-keep class com.doodeec.scom.listener.SimpleResponseListener {
+    public *;
+}

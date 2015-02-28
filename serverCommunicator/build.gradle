@@ -5,50 +5,16 @@ android {
     buildToolsVersion "21.1.2"
 
     defaultConfig {
-        minSdkVersion 14
+        minSdkVersion 10
         targetSdkVersion 21
-        versionName "0.1.3"
+        versionName "1.0.0"
     }
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-}
-
-/**
- * moves the JDK dependency after jUnit to make JUnit usable
- * JDK uses its own JUnit, which can be old, so ours JUnit have to
- * be loaded before JDK's
- */
-task enableJUnit {
-    def file = file("${project.name}.iml")
-
-    println "enabling JUnit"
-
-    doLast {
-        def parsedXml = (new XmlParser()).parse(file)
-        def node = parsedXml.component[1]
-        def jdk = node.find { it.@type == "jdk" }
-
-        // remove first, it can be wrongly configured
-        if (jdk != null) {
-            // remove original node
-            jdk.parent().remove(jdk)
-
-            // add node to the end
-            new Node(node, 'orderEntry', ['type': "jdk", 'jdkType': jdk.@jdkType, 'jdkName': jdk.@jdkName])
-            def writer = new StringWriter()
-            new XmlNodePrinter(new PrintWriter(writer)).print(parsedXml)
-            file.text = writer.toString()
-        }
-    }
-}
-
-task copyTestResources(type: Copy) {
-    from "${buildDir}/intermediates/classes/test/debug"
-    into "${buildDir}/intermediates/classes/debug"
 }
 
 /**
@@ -86,4 +52,6 @@ task generatePom << {
 
 dependencies {
     androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'org.mockito:mockito-core:2.0.5-beta'
+    testCompile 'junit:junit:4.12'
 }

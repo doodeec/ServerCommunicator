@@ -9,8 +9,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 /**
- * Backend Server request for Image resource
- * Wrapper around {@link java.net.HttpURLConnection}
+ * Server request for Image resource
+ * {@link android.os.AsyncTask} wrapper around {@link java.net.HttpURLConnection}
  * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
  * @author dusan.bartos

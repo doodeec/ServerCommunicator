@@ -1,6 +1,7 @@
 package com.doodeec.scom;
 
 import android.os.AsyncTask;
+import android.os.Build;
 
 import com.doodeec.scom.listener.BaseRequestListener;
 
@@ -46,27 +47,6 @@ public abstract class BaseServerRequest<ReturnType> extends
     protected static final String REQ_ENCODING_VALUE = "gzip";
 
     /**
-     * Request type enum
-     * GET | POST | PUT | DELETE
-     */
-    public static enum RequestType {
-        GET("GET"),
-        POST("POST"),
-        PUT("PUT"),
-        DELETE("DELETE");
-
-        private String value;
-
-        private RequestType(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
-
-    /**
      * Post data to add to request body (payload)
      */
     protected String mPostData;
@@ -86,10 +66,10 @@ public abstract class BaseServerRequest<ReturnType> extends
     /**
      * Request type
      * allowed values are
-     * {@link com.doodeec.scom.ServerRequest.RequestType#GET}
-     * {@link com.doodeec.scom.ServerRequest.RequestType#POST}
-     * {@link com.doodeec.scom.ServerRequest.RequestType#PUT}
-     * {@link com.doodeec.scom.ServerRequest.RequestType#DELETE}
+     * {@link com.doodeec.scom.RequestType#GET}
+     * {@link com.doodeec.scom.RequestType#POST}
+     * {@link com.doodeec.scom.RequestType#PUT}
+     * {@link com.doodeec.scom.RequestType#DELETE}
      */
     protected RequestType mType;
 
@@ -108,6 +88,11 @@ public abstract class BaseServerRequest<ReturnType> extends
 
     /**
      * Constructs basic Server Request without body data (i.e. GET request)
+     * Available types are:
+     * {@link com.doodeec.scom.RequestType#GET}
+     * {@link com.doodeec.scom.RequestType#POST}
+     * {@link com.doodeec.scom.RequestType#PUT}
+     * {@link com.doodeec.scom.RequestType#DELETE}
      *
      * @param type     request type
      * @param listener listener
@@ -120,11 +105,12 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
-     * Constructs Server Request with POST payload
+     * Constructs Server Request with POST payload data
      *
-     * @param type     request type
+     * @param type     request type (typically {@link com.doodeec.scom.RequestType#POST}) for this constructor
      * @param data     post data
      * @param listener listener
+     * @see #BaseServerRequest(com.doodeec.scom.RequestType, com.doodeec.scom.listener.BaseRequestListener)
      */
     protected BaseServerRequest(RequestType type, String data, BaseRequestListener listener) {
         this(type, listener);
@@ -133,6 +119,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
     /**
      * Sets connection timeout
+     * Default value is 30 seconds
      *
      * @param timeout timeout in milliseconds
      */
@@ -142,7 +129,8 @@ public abstract class BaseServerRequest<ReturnType> extends
 
     /**
      * Sets additional headers
-     * Headers are added to existing set
+     * Headers are added to existing set of headers, in case only this set should be available,
+     * {@link #clearHeaders()} should be called first
      *
      * @param headersMap headers
      */
@@ -151,19 +139,19 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
-     * Clears all headers
+     * Clears all stored headers
      */
     public void clearHeaders() {
         mRequestHeaders.clear();
     }
 
     /**
-     * Can be used (overridden in request implementation) to define default headers for the class
+     * Can be used (overridden in request implementation) to define default headers for the
+     * overridden class
      *
      * @see #BaseServerRequest(RequestType, com.doodeec.scom.listener.BaseRequestListener)
      */
     protected void initHeaders() {
-
     }
 
     @Override
@@ -196,6 +184,11 @@ public abstract class BaseServerRequest<ReturnType> extends
         // set connection timeouts
         connection.setConnectTimeout(mTimeout);
         connection.setReadTimeout(mTimeout);
+        connection.setDoInput(true);
+
+        if (mType.equals(RequestType.POST)) {
+            connection.setUseCaches(false);
+        }
 
         // set connection header properties
         connection.setRequestProperty(REQ_CHARSET_KEY, HTTP.UTF_8);
@@ -318,11 +311,11 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
-     * Processes input stream to defined generic object type
+     * Processes input stream to create defined generic object instance
      *
      * @param contentType content type from response headers
      * @param inputStream input stream to be processed
-     * @return generic object
+     * @return generic object instance
      */
     protected abstract ReturnType processInputStream(String contentType, InputStream inputStream);
 
@@ -347,6 +340,10 @@ public abstract class BaseServerRequest<ReturnType> extends
      * @return asyncTask
      */
     public BaseServerRequest executeInParallel(String... params) {
-        return (BaseServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            return (BaseServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+        } else {
+            return (BaseServerRequest) execute(params);
+        }
     }
 }
