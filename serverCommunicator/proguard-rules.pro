@@ -15,6 +15,7 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-keepattributes Signature
 -keep class com.doodeec.scom.BaseServerRequest {
     public *;
 }

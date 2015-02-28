@@ -1,6 +1,6 @@
 # ServerCommunicator
 Simple server communicator for RESTful data source
-## Version 1.0.0
+## Version 1.0.1
 
 ### Description
 Library module for communicating with your REST server
@@ -14,7 +14,7 @@ dependencies, it will be downloaded to project.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.0.0'
+        compile 'com.doodeec.utils:serverCommunicator:1.0.1'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.
