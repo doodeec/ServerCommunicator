@@ -166,7 +166,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             url = new URL(params[0]);
         } catch (MalformedURLException e) {
             //IO exception
-            mRequestError = new RequestError("Cannot read target URL");
+            mRequestError = new RequestError("Cannot read target URL", null);
             return null;
         }
 
@@ -174,7 +174,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             connection = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
             //IO exception
-            mRequestError = new RequestError("Cannot open connection");
+            mRequestError = new RequestError("Cannot open connection", url.toString());
             return null;
         }
 
@@ -236,7 +236,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
             if (status != HttpURLConnection.HTTP_OK) {
                 connection.getResponseMessage();
-                mRequestError = new RequestError("Server returned status code " + status);
+                mRequestError = new RequestError("Server returned status code " + status, url.toString());
                 return null;
             }
 
@@ -289,15 +289,15 @@ public abstract class BaseServerRequest<ReturnType> extends
             }
         } catch (ConnectException e) {
             // connect exception, server not responding
-            mRequestError = new RequestError("Server not responding");
+            mRequestError = new RequestError("Server not responding", url.toString());
             return null;
         } catch (SocketTimeoutException e) {
             // timeout exception
-            mRequestError = new RequestError("Connection timeout");
+            mRequestError = new RequestError("Connection timeout", url.toString());
             return null;
         } catch (IOException e) {
             // io exception
-            mRequestError = new RequestError(e);
+            mRequestError = new RequestError(e, url.toString());
             return null;
         } finally {
             // progress 90%

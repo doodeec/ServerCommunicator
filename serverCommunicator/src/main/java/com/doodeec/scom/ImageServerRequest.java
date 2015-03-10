@@ -45,7 +45,7 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
         } else if (mRequestError != null) {
             mListener.onError(mRequestError);
         } else {
-            mListener.onError(new RequestError("Response bitmap empty"));
+            mListener.onError(new RequestError("Response bitmap empty", null));
         }
     }
 }

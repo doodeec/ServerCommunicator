@@ -7,3 +7,6 @@
 gradle
 gradlew*
 build
+
+javadoc
+bintray

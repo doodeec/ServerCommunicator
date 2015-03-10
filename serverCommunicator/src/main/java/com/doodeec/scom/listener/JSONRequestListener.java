@@ -17,14 +17,14 @@ import org.json.JSONObject;
 public abstract class JSONRequestListener implements BaseRequestListener<JSONObject> {
 
     public void onSuccess() {
-        onError(new RequestError("OnSuccess() not implemented"));
+        onError(new RequestError("OnSuccess() not implemented", null));
     }
 
     public void onSuccess(JSONObject object) {
-        onError(new RequestError("OnSuccess(JSONObject) not implemented"));
+        onError(new RequestError("OnSuccess(JSONObject) not implemented", null));
     }
 
     public void onSuccess(JSONArray array) {
-        onError(new RequestError("OnSuccess(JSONArray) not implemented"));
+        onError(new RequestError("OnSuccess(JSONArray) not implemented", null));
     }
 }

@@ -114,14 +114,14 @@ public class ServerRequest extends BaseServerRequest<String> {
                         ((JSONRequestListener) mListener).onSuccess(new JSONArray(responseString));
                     } catch (JSONException arrayException) {
                         // not a json array, not a json object
-                        mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray"));
+                        mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", null));
                     }
                 }
             }
         } else if (mRequestError != null) {
             mListener.onError(mRequestError);
         } else {
-            mListener.onError(new RequestError("Response string empty"));
+            mListener.onError(new RequestError("Response string empty", null));
         }
     }
 }
