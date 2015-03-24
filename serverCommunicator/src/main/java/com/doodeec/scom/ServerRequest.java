@@ -29,7 +29,7 @@ public class ServerRequest extends BaseServerRequest<String> {
 
     // response headers
     private static final String REQ_CONTENT_TYPE_KEY = HTTP.CONTENT_TYPE;
-    private static final String REQ_CONTENT_TYPE_VALUE = "application/json; charset=utf-8";
+    private static final String REQ_CONTENT_TYPE_VALUE = "application/json";
 
     // default response charset
     private static Charset mCharset = Charset.forName("UTF-8");
@@ -85,12 +85,21 @@ public class ServerRequest extends BaseServerRequest<String> {
     @Override
     protected String processInputStream(String contentType, InputStream inputStream) {
         try {
-            int ch;
+            /*int ch;
             InputStreamReader streamReader = new InputStreamReader(inputStream, mCharset.name());
             StringBuilder sb = new StringBuilder();
             while ((ch = streamReader.read()) != -1) {
                 sb.append((char) ch);
+            }*/
+
+            InputStreamReader streamReader = new InputStreamReader(inputStream, mCharset.name());
+            StringBuilder sb = new StringBuilder();
+            char[] buf = new char[2048];
+            int charsRead;
+            while((charsRead = streamReader.read(buf, 0, 2048)) > 0) {
+                sb.append(buf, 0, charsRead);
             }
+
             return sb.toString();
         } catch (IOException e) {
             return null;

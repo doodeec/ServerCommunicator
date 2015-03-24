@@ -36,7 +36,8 @@ public abstract class BaseServerRequest<ReturnType> extends
     private static final int PROGRESS_CONNECTED = 20;
     private static final int PROGRESS_RESPONSE_CODE = 40;
     private static final int PROGRESS_RESPONSE_TYPE = 50;
-    private static final int PROGRESS_CONTENT = 70;
+    private static final int PROGRESS_CONTENT = 60;
+    private static final int PROGRESS_INPUT_STREAM = 70;
     private static final int PROGRESS_CONNECTION_CLOSE = 80;
     private static final int PROGRESS_DISCONNECTING = 90;
     private static final int PROGRESS_DONE = 100;
@@ -57,6 +58,13 @@ public abstract class BaseServerRequest<ReturnType> extends
      * default to 30sec
      */
     protected int mTimeout = 30000;
+
+    /**
+     * Read timeout
+     * in milliseconds
+     * default to 30sec
+     */
+    protected int mReadTimeout = 30000;
 
     /**
      * Additional request headers
@@ -128,6 +136,16 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     /**
+     * Sets read timeout
+     * Default value is 30 seconds
+     *
+     * @param timeout timeout in milliseconds
+     */
+    public void setReadTimeout(int timeout) {
+        mReadTimeout = timeout;
+    }
+
+    /**
      * Sets additional headers
      * Headers are added to existing set of headers, in case only this set should be available,
      * {@link #clearHeaders()} should be called first
@@ -183,7 +201,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
         // set connection timeouts
         connection.setConnectTimeout(mTimeout);
-        connection.setReadTimeout(mTimeout);
+        connection.setReadTimeout(mReadTimeout);
         connection.setDoInput(true);
 
         if (mType.equals(RequestType.POST)) {
@@ -252,7 +270,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             InputStream inputStream = null;
             try {
                 inputStream = connection.getInputStream();
-                // progress 70%
+                // progress 60%
                 publishProgress(PROGRESS_CONTENT);
 
                 // Checking for cancelled flag in major thread breakpoints
@@ -272,6 +290,9 @@ public abstract class BaseServerRequest<ReturnType> extends
                         }
                     }
                 }
+
+                // progress 70%
+                publishProgress(PROGRESS_INPUT_STREAM);
 
                 decodedResponseData = processInputStream(connection.getContentType(), inputStream);
             } finally {
