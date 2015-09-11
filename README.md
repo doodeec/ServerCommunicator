@@ -8,10 +8,7 @@ Library module for communicating with your REST server
 
 ### Usage
 Import library in your application. Either as a `.aar` file in your `libs` folder
-or as a maven dependency. Library is published to jcenter, so you just have to
-include this dependency. **The library is not synced to maven central repo yet, so it probably
-won't be found with Android Studio dependency manager search**. But if you include it in
-dependencies, it will be downloaded to project.
+or as a maven dependency.
 
     dependencies {
         ...
