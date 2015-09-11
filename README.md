@@ -2,6 +2,8 @@
 Simple server communicator for RESTful data source
 
 [ ![Download](https://api.bintray.com/packages/doodeec/maven/server-communicator/images/download.svg) ](https://bintray.com/doodeec/maven/server-communicator/_latestVersion)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.doodeec.utils/serverCommunicator/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.doodeec.utils/serverCommunicator)
+
 
 ### Description
 Library module for communicating with your REST server
