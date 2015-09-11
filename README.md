@@ -15,7 +15,7 @@ dependencies, it will be downloaded to project.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.2.0'
+        compile 'com.doodeec.utils:serverCommunicator:1.2.1'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.

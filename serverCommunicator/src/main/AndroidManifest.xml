@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-<manifest package="com.doodeec.utils" />
-=======
-<manifest package="com.doodeec.scom" />
->>>>>>> parent of 5674e78... 1.2.0 javadoc
+<manifest package="com.doodeec.utils.network" />
