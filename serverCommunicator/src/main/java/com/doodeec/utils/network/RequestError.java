@@ -1,4 +1,4 @@
-package com.doodeec.scom;
+package com.doodeec.utils.network;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -16,6 +16,8 @@ public class RequestError {
     private Exception mException;
     private String mErrorMessage;
     private ErrorType mType;
+
+    public static final RequestError INTERCEPT = new RequestError("Response Interrupted by Interceptor", null);
 
     /**
      * Creates Request error from thrown Exception
@@ -42,7 +44,7 @@ public class RequestError {
     }
 
     /**
-     * Creates Request error of type {@link com.doodeec.scom.ErrorType#Custom} with custom message
+     * Creates Request error of type {@link com.doodeec.utils.network.ErrorType#Custom} with custom message
      *
      * @param message error message
      * @param url     request url
@@ -54,7 +56,7 @@ public class RequestError {
     }
 
     /**
-     * Gets {@link com.doodeec.scom.ErrorType} of this error
+     * Gets {@link com.doodeec.utils.network.ErrorType} of this error
      *
      * @return type
      */

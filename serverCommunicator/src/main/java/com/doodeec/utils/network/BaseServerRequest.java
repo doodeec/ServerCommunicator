@@ -1,11 +1,9 @@
-package com.doodeec.scom;
+package com.doodeec.utils.network;
 
 import android.os.AsyncTask;
 import android.os.Build;
 
-import com.doodeec.scom.listener.BaseRequestListener;
-
-import org.apache.http.protocol.HTTP;
+import com.doodeec.utils.network.listener.BaseRequestListener;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,30 +20,26 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Abstract base which is common for both {@link com.doodeec.scom.ServerRequest}
- * and {@link com.doodeec.scom.ImageServerRequest}
+ * Abstract base which is common for both {@link com.doodeec.utils.network.ServerRequest}
+ * and {@link com.doodeec.utils.network.ImageServerRequest}
  *
  * @author dusan.bartos
  */
+@SuppressWarnings("unused")
 public abstract class BaseServerRequest<ReturnType> extends
-        AsyncTask<String, Integer, ReturnType> implements CancellableServerRequest {
+        AsyncTask<String, Integer, CommunicatorResponse<ReturnType>> implements CancellableServerRequest {
 
     // asyncTask progress
-    private static final int PROGRESS_IDLE = 0;
-    private static final int PROGRESS_OPENED = 10;
-    private static final int PROGRESS_CONNECTED = 20;
-    private static final int PROGRESS_RESPONSE_CODE = 40;
-    private static final int PROGRESS_RESPONSE_TYPE = 50;
-    private static final int PROGRESS_CONTENT = 60;
-    private static final int PROGRESS_INPUT_STREAM = 70;
-    private static final int PROGRESS_CONNECTION_CLOSE = 80;
-    private static final int PROGRESS_DISCONNECTING = 90;
-    private static final int PROGRESS_DONE = 100;
-
-    // response headers
-    protected static final String REQ_CHARSET_KEY = "Accept-Charset";
-    protected static final String REQ_ENCODING_KEY = "Accept-Encoding";
-    protected static final String REQ_ENCODING_VALUE = "gzip";
+    public static final int PROGRESS_IDLE = 0;
+    public static final int PROGRESS_OPENED = 10;
+    public static final int PROGRESS_CONNECTED = 20;
+    public static final int PROGRESS_RESPONSE_CODE = 40;
+    public static final int PROGRESS_RESPONSE_TYPE = 50;
+    public static final int PROGRESS_CONTENT = 60;
+    public static final int PROGRESS_INPUT_STREAM = 70;
+    public static final int PROGRESS_CONNECTION_CLOSE = 80;
+    public static final int PROGRESS_DISCONNECTING = 90;
+    public static final int PROGRESS_DONE = 100;
 
     /**
      * Post data to add to request body (payload)
@@ -74,33 +68,41 @@ public abstract class BaseServerRequest<ReturnType> extends
     /**
      * Request type
      * allowed values are
-     * {@link com.doodeec.scom.RequestType#GET}
-     * {@link com.doodeec.scom.RequestType#POST}
-     * {@link com.doodeec.scom.RequestType#PUT}
-     * {@link com.doodeec.scom.RequestType#DELETE}
+     * {@link com.doodeec.utils.network.RequestType#GET}
+     * {@link com.doodeec.utils.network.RequestType#POST}
+     * {@link com.doodeec.utils.network.RequestType#PUT}
+     * {@link com.doodeec.utils.network.RequestType#DELETE}
      */
     protected RequestType mType;
 
     /**
      * Request listener
      *
-     * @see com.doodeec.scom.listener.JSONRequestListener
+     * @see com.doodeec.utils.network.listener.JSONRequestListener
      */
     protected BaseRequestListener mListener;
 
     /**
-     * Request Error
-     * Holds the reason why request was not successful
+     * Request interceptor
+     *
+     * @see ResponseInterceptor
      */
-    protected RequestError mRequestError;
+    protected ResponseInterceptor mInterceptor;
+
+    /**
+     * Connection Response
+     *
+     * @see CommunicatorResponse
+     */
+    protected CommunicatorResponse<ReturnType> mCommunicatorResponse = new CommunicatorResponse<>();
 
     /**
      * Constructs basic Server Request without body data (i.e. GET request)
      * Available types are:
-     * {@link com.doodeec.scom.RequestType#GET}
-     * {@link com.doodeec.scom.RequestType#POST}
-     * {@link com.doodeec.scom.RequestType#PUT}
-     * {@link com.doodeec.scom.RequestType#DELETE}
+     * {@link com.doodeec.utils.network.RequestType#GET}
+     * {@link com.doodeec.utils.network.RequestType#POST}
+     * {@link com.doodeec.utils.network.RequestType#PUT}
+     * {@link com.doodeec.utils.network.RequestType#DELETE}
      *
      * @param type     request type
      * @param listener listener
@@ -115,14 +117,24 @@ public abstract class BaseServerRequest<ReturnType> extends
     /**
      * Constructs Server Request with POST payload data
      *
-     * @param type     request type (typically {@link com.doodeec.scom.RequestType#POST}) for this constructor
+     * @param type     request type (typically {@link com.doodeec.utils.network.RequestType#POST}) for this constructor
      * @param data     post data
      * @param listener listener
-     * @see #BaseServerRequest(com.doodeec.scom.RequestType, com.doodeec.scom.listener.BaseRequestListener)
+     *
+     * @see #BaseServerRequest(com.doodeec.utils.network.RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
      */
     protected BaseServerRequest(RequestType type, String data, BaseRequestListener listener) {
         this(type, listener);
         mPostData = data;
+    }
+
+    /**
+     * Sets response interceptor
+     *
+     * @param interceptor interceptor interface
+     */
+    public void setInterceptor(ResponseInterceptor interceptor) {
+        mInterceptor = interceptor;
     }
 
     /**
@@ -167,13 +179,13 @@ public abstract class BaseServerRequest<ReturnType> extends
      * Can be used (overridden in request implementation) to define default headers for the
      * overridden class
      *
-     * @see #BaseServerRequest(RequestType, com.doodeec.scom.listener.BaseRequestListener)
+     * @see #BaseServerRequest(RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
      */
     protected void initHeaders() {
     }
 
     @Override
-    protected ReturnType doInBackground(String... params) {
+    protected CommunicatorResponse<ReturnType> doInBackground(String... params) {
         URL url;
         HttpURLConnection connection;
 
@@ -184,16 +196,16 @@ public abstract class BaseServerRequest<ReturnType> extends
             url = new URL(params[0]);
         } catch (MalformedURLException e) {
             //IO exception
-            mRequestError = new RequestError("Cannot read target URL", null);
-            return null;
+            mCommunicatorResponse.setError(new RequestError("Cannot read target URL", params[0]));
+            return mCommunicatorResponse;
         }
 
         try {
             connection = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
             //IO exception
-            mRequestError = new RequestError("Cannot open connection", url.toString());
-            return null;
+            mCommunicatorResponse.setError(new RequestError("Cannot open connection", url.toString()));
+            return mCommunicatorResponse;
         }
 
         // progress 10%
@@ -202,15 +214,18 @@ public abstract class BaseServerRequest<ReturnType> extends
         // set connection timeouts
         connection.setConnectTimeout(mTimeout);
         connection.setReadTimeout(mReadTimeout);
-        connection.setDoInput(true);
+        connection.setInstanceFollowRedirects(true);
+        connection.setChunkedStreamingMode(0);
 
-        if (mType.equals(RequestType.POST)) {
+        // set additional settings for POST request
+        if (mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) {
+            connection.setDoInput(true);
             connection.setUseCaches(false);
         }
 
         // set connection header properties
-        connection.setRequestProperty(REQ_CHARSET_KEY, HTTP.UTF_8);
-        connection.setRequestProperty(REQ_ENCODING_KEY, REQ_ENCODING_VALUE);
+        connection.setRequestProperty("Accept-Charset", "UTF-8");
+        connection.setRequestProperty("Accept-Encoding", "gzip");
 
         // set additional request headers
         if (mRequestHeaders != null) {
@@ -227,8 +242,6 @@ public abstract class BaseServerRequest<ReturnType> extends
             throw new IllegalArgumentException("Request type has invalid value");
         }
 
-        ReturnType decodedResponseData = null;
-
         try {
             connection.connect();
             // progress 20%
@@ -236,7 +249,7 @@ public abstract class BaseServerRequest<ReturnType> extends
 
             // append post data if available
             if (mPostData != null) {
-                byte[] outputInBytes = mPostData.getBytes(HTTP.UTF_8);
+                byte[] outputInBytes = mPostData.getBytes("UTF-8");
                 OutputStream os = connection.getOutputStream();
                 os.write(outputInBytes);
                 os.close();
@@ -245,23 +258,33 @@ public abstract class BaseServerRequest<ReturnType> extends
             // Checking for cancelled flag in major thread breakpoints
             if (isCancelled()) {
                 connection.disconnect();
-                return null;
+                mCommunicatorResponse.setCancelled(true);
+                return mCommunicatorResponse;
             }
 
             int status = connection.getResponseCode();
+            mCommunicatorResponse.setStatusCode(status);
             // progress 40%
             publishProgress(PROGRESS_RESPONSE_CODE);
 
+            //try to hook interceptor
+            if (mInterceptor != null && mInterceptor.onProcessStatus(status)) {
+                //response intercepted
+                mCommunicatorResponse.setError(RequestError.INTERCEPT);
+                return mCommunicatorResponse;
+            }
+
             if (status != HttpURLConnection.HTTP_OK) {
                 connection.getResponseMessage();
-                mRequestError = new RequestError("Server returned status code " + status, url.toString());
-                return null;
+                mCommunicatorResponse.setError(new RequestError("Server returned status code " + status, url.toString()));
+                return mCommunicatorResponse;
             }
 
             // Checking for cancelled flag in major thread breakpoints
             if (isCancelled()) {
                 connection.disconnect();
-                return null;
+                mCommunicatorResponse.setCancelled(true);
+                return mCommunicatorResponse;
             }
 
             // progress 50%
@@ -276,15 +299,16 @@ public abstract class BaseServerRequest<ReturnType> extends
                 // Checking for cancelled flag in major thread breakpoints
                 if (isCancelled()) {
                     connection.disconnect();
-                    return null;
+                    mCommunicatorResponse.setCancelled(true);
+                    return mCommunicatorResponse;
                 }
 
                 // handle gzipped input stream
                 Map<String, List<String>> headers = connection.getHeaderFields();
-                List<String> contentEncodings = headers.get(HTTP.CONTENT_ENCODING);
+                List<String> contentEncodings = headers.get("Content-Encoding");
                 if (contentEncodings != null) {
                     for (String header : contentEncodings) {
-                        if (header.equalsIgnoreCase(REQ_ENCODING_VALUE)) {
+                        if (header.equalsIgnoreCase("gzip")) {
                             inputStream = new GZIPInputStream(inputStream);
                             break;
                         }
@@ -294,7 +318,8 @@ public abstract class BaseServerRequest<ReturnType> extends
                 // progress 70%
                 publishProgress(PROGRESS_INPUT_STREAM);
 
-                decodedResponseData = processInputStream(connection.getContentType(), inputStream);
+                mCommunicatorResponse.setData(
+                        processInputStream(connection.getContentType(), inputStream));
             } finally {
                 // progress 80%
                 publishProgress(PROGRESS_CONNECTION_CLOSE);
@@ -306,20 +331,21 @@ public abstract class BaseServerRequest<ReturnType> extends
             // Checking for cancelled flag in major thread breakpoints
             if (isCancelled()) {
                 connection.disconnect();
-                return null;
+                mCommunicatorResponse.setCancelled(true);
+                return mCommunicatorResponse;
             }
         } catch (ConnectException e) {
             // connect exception, server not responding
-            mRequestError = new RequestError("Server not responding", url.toString());
-            return null;
+            mCommunicatorResponse.setError(new RequestError("Server not responding", url.toString()));
+            return mCommunicatorResponse;
         } catch (SocketTimeoutException e) {
             // timeout exception
-            mRequestError = new RequestError("Connection timeout", url.toString());
-            return null;
+            mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
+            return mCommunicatorResponse;
         } catch (IOException e) {
             // io exception
-            mRequestError = new RequestError(e, url.toString());
-            return null;
+            mCommunicatorResponse.setError(new RequestError(e, url.toString()));
+            return mCommunicatorResponse;
         } finally {
             // progress 90%
             publishProgress(PROGRESS_DISCONNECTING);
@@ -328,7 +354,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             publishProgress(PROGRESS_DONE);
         }
 
-        return decodedResponseData;
+        return mCommunicatorResponse;
     }
 
     /**
@@ -336,6 +362,7 @@ public abstract class BaseServerRequest<ReturnType> extends
      *
      * @param contentType content type from response headers
      * @param inputStream input stream to be processed
+     *
      * @return generic object instance
      */
     protected abstract ReturnType processInputStream(String contentType, InputStream inputStream);
@@ -351,13 +378,21 @@ public abstract class BaseServerRequest<ReturnType> extends
     }
 
     @Override
-    protected abstract void onPostExecute(ReturnType returnType);
+    protected abstract void onPostExecute(CommunicatorResponse<ReturnType> returnType);
+
+    /**
+     * Clones request parameters to the new instance
+     *
+     * @return cloned instance
+     */
+    public abstract BaseServerRequest<ReturnType> cloneRequest();
 
     /**
      * Executes asyncTask in parallel with other tasks
      * Wrapper for {@link android.os.AsyncTask#THREAD_POOL_EXECUTOR}
      *
      * @param params params
+     *
      * @return asyncTask
      */
     public BaseServerRequest executeInParallel(String... params) {

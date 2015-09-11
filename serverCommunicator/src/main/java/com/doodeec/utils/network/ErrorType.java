@@ -1,4 +1,4 @@
-package com.doodeec.scom;
+package com.doodeec.utils.network;
 
 /**
  * Request error types

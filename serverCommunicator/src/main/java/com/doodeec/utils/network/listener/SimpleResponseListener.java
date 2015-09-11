@@ -1,6 +1,6 @@
-package com.doodeec.scom.listener;
+package com.doodeec.utils.network.listener;
 
-import com.doodeec.scom.RequestError;
+import com.doodeec.utils.network.RequestError;
 
 /**
  * Response listener

@@ -1,11 +1,11 @@
-package com.doodeec.scom.listener;
+package com.doodeec.utils.network.listener;
 
 /**
  * Response listener
  * Intended to be used in network service, when request listener is processed from raw data to
  * typed data
  *
- * The difference with {@link com.doodeec.scom.listener.SimpleResponseListener} is that this
+ * The difference with {@link com.doodeec.utils.network.listener.SimpleResponseListener} is that this
  * interface declares also Cancel and Progress event listeners
  *
  * @author dusan.bartos

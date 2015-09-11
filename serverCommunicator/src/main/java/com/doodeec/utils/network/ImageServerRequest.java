@@ -1,9 +1,10 @@
-package com.doodeec.scom;
+package com.doodeec.utils.network;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 
-import com.doodeec.scom.listener.BaseRequestListener;
+import com.doodeec.utils.network.listener.BaseRequestListener;
 
 import java.io.InputStream;
 import java.util.Arrays;
@@ -14,8 +15,8 @@ import java.util.Arrays;
  * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
  * @author dusan.bartos
- * @see com.doodeec.scom.BaseServerRequest
- * @see com.doodeec.scom.listener.JSONRequestListener
+ * @see com.doodeec.utils.network.BaseServerRequest
+ * @see com.doodeec.utils.network.listener.JSONRequestListener
  * @see RequestError
  */
 public class ImageServerRequest extends BaseServerRequest<Bitmap> {
@@ -38,14 +39,27 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
     }
 
     @Override
-    protected void onPostExecute(Bitmap imageResource) {
-        if (imageResource != null) {
+    protected void onPostExecute(CommunicatorResponse<Bitmap> response) {
+        if (response.isIntercepted()) {
+            //do nothing
+            Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+        } else if (response.hasError()) {
+            mListener.onError(response.getError());
+        } else if (response.getData() != null) {
             // POST can have empty response, but 200 response code
-            mListener.onSuccess(imageResource);
-        } else if (mRequestError != null) {
-            mListener.onError(mRequestError);
+            //noinspection unchecked
+            mListener.onSuccess(response.getData());
         } else {
             mListener.onError(new RequestError("Response bitmap empty", null));
         }
+    }
+
+    @Override
+    public ImageServerRequest cloneRequest() {
+        @SuppressWarnings("unchecked") ImageServerRequest clonedRequest = new ImageServerRequest(mType, mListener);
+        clonedRequest.mTimeout = mTimeout;
+        clonedRequest.mReadTimeout = mReadTimeout;
+        clonedRequest.mRequestHeaders = mRequestHeaders;
+        return clonedRequest;
     }
 }

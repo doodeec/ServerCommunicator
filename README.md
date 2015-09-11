@@ -1,6 +1,6 @@
 # ServerCommunicator
 Simple server communicator for RESTful data source
-## Version 1.1.0
+## Version 1.2.0
 
 ### Description
 Library module for communicating with your REST server
@@ -8,13 +8,13 @@ Library module for communicating with your REST server
 ### Usage
 Import library in your application. Either as a `.aar` file in your `libs` folder
 or as a maven dependency. Library is published to jcenter, so you just have to
-include this dependency. **The library is not in maven central repo, so it probably
+include this dependency. **The library is not synced to maven central repo yet, so it probably
 won't be found with Android Studio dependency manager search**. But if you include it in
 dependencies, it will be downloaded to project.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.1.0'
+        compile 'com.doodeec.utils:serverCommunicator:1.2.0'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.

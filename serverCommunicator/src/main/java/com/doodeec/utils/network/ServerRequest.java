@@ -1,8 +1,10 @@
-package com.doodeec.scom;
+package com.doodeec.utils.network;
 
-import com.doodeec.scom.listener.JSONRequestListener;
+import android.util.Log;
 
-import org.apache.http.protocol.HTTP;
+import com.doodeec.utils.network.listener.BaseRequestListener;
+import com.doodeec.utils.network.listener.JSONRequestListener;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,15 +22,16 @@ import java.nio.charset.UnsupportedCharsetException;
  * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
  * @author dusan.bartos
- * @see com.doodeec.scom.listener.BaseRequestListener
- * @see com.doodeec.scom.listener.JSONRequestListener
- * @see com.doodeec.scom.ErrorType
- * @see com.doodeec.scom.RequestError
+ * @see com.doodeec.utils.network.listener.BaseRequestListener
+ * @see com.doodeec.utils.network.listener.JSONRequestListener
+ * @see com.doodeec.utils.network.ErrorType
+ * @see com.doodeec.utils.network.RequestError
  */
+@SuppressWarnings("unused")
 public class ServerRequest extends BaseServerRequest<String> {
 
     // response headers
-    private static final String REQ_CONTENT_TYPE_KEY = HTTP.CONTENT_TYPE;
+    private static final String REQ_CONTENT_TYPE_KEY = "Content-Type";
     private static final String REQ_CONTENT_TYPE_VALUE = "application/json";
 
     // default response charset
@@ -37,7 +40,7 @@ public class ServerRequest extends BaseServerRequest<String> {
     /**
      * Creates server request of given type
      *
-     * @see com.doodeec.scom.BaseServerRequest#BaseServerRequest(com.doodeec.scom.RequestType, com.doodeec.scom.listener.BaseRequestListener)
+     * @see com.doodeec.utils.network.BaseServerRequest#BaseServerRequest(com.doodeec.utils.network.RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
      */
     public ServerRequest(RequestType type, JSONRequestListener listener) {
         super(type, listener);
@@ -46,9 +49,16 @@ public class ServerRequest extends BaseServerRequest<String> {
     /**
      * Creates server request with POST data (payload)
      *
-     * @see com.doodeec.scom.BaseServerRequest#BaseServerRequest(com.doodeec.scom.RequestType, String, com.doodeec.scom.listener.BaseRequestListener)
+     * @see com.doodeec.utils.network.BaseServerRequest#BaseServerRequest(com.doodeec.utils.network.RequestType, String, com.doodeec.utils.network.listener.BaseRequestListener)
      */
     public ServerRequest(RequestType type, String data, JSONRequestListener listener) {
+        super(type, data, listener);
+    }
+
+    /**
+     * Helper for cloning request
+     */
+    private ServerRequest(RequestType type, String data, BaseRequestListener listener) {
         super(type, data, listener);
     }
 
@@ -69,6 +79,7 @@ public class ServerRequest extends BaseServerRequest<String> {
      * - iso-8859-2
      *
      * @param canonicalName charset name
+     *
      * @throws IllegalCharsetNameException
      * @throws UnsupportedCharsetException
      */
@@ -85,18 +96,11 @@ public class ServerRequest extends BaseServerRequest<String> {
     @Override
     protected String processInputStream(String contentType, InputStream inputStream) {
         try {
-            /*int ch;
-            InputStreamReader streamReader = new InputStreamReader(inputStream, mCharset.name());
-            StringBuilder sb = new StringBuilder();
-            while ((ch = streamReader.read()) != -1) {
-                sb.append((char) ch);
-            }*/
-
             InputStreamReader streamReader = new InputStreamReader(inputStream, mCharset.name());
             StringBuilder sb = new StringBuilder();
             char[] buf = new char[2048];
             int charsRead;
-            while((charsRead = streamReader.read(buf, 0, 2048)) > 0) {
+            while ((charsRead = streamReader.read(buf, 0, 2048)) > 0) {
                 sb.append(buf, 0, charsRead);
             }
 
@@ -107,30 +111,43 @@ public class ServerRequest extends BaseServerRequest<String> {
     }
 
     @Override
-    protected void onPostExecute(String responseString) {
-        if (responseString != null) {
-            // POST can have empty response, but 200 response code
-            if (mType.equals(RequestType.POST) && (responseString.equals("") || responseString.equals("OK"))) {
+    protected void onPostExecute(CommunicatorResponse<String> response) {
+        if (response.isIntercepted()) {
+            //do nothing
+            Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+        } else if (response.hasError()) {
+            mListener.onError(response.getError());
+        } else if (response.getData() != null) {
+            // POST/PUT can have empty response, but 200 response code
+            if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
+                    (response.getData().equals("") || response.getData().equals("OK"))) {
                 ((JSONRequestListener) mListener).onSuccess();
             } else {
                 try {
                     // propagate json object to listener
-                    ((JSONRequestListener) mListener).onSuccess(new JSONObject(responseString));
+                    ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
                 } catch (JSONException e) {
                     // not a json object
                     try {
                         // propagate json array to listener
-                        ((JSONRequestListener) mListener).onSuccess(new JSONArray(responseString));
+                        ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
                     } catch (JSONException arrayException) {
                         // not a json array, not a json object
                         mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", null));
                     }
                 }
             }
-        } else if (mRequestError != null) {
-            mListener.onError(mRequestError);
         } else {
-            mListener.onError(new RequestError("Response string empty", null));
+            mListener.onError(new RequestError("Response empty", null));
         }
+    }
+
+    @Override
+    public ServerRequest cloneRequest() {
+        ServerRequest clonedRequest = new ServerRequest(mType, mPostData, mListener);
+        clonedRequest.mTimeout = mTimeout;
+        clonedRequest.mReadTimeout = mReadTimeout;
+        clonedRequest.mRequestHeaders = mRequestHeaders;
+        return clonedRequest;
     }
 }

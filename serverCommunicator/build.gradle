@@ -1,13 +1,39 @@
 apply plugin: 'com.android.library'
 
+final LIBRARY_NAME = 'server-communicator'
+
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = LIBRARY_NAME
+
+    publishedGroupId = GROUP
+    libraryName = LIBRARY_NAME
+    artifact = POM_ARTIFACT_ID
+
+    libraryDescription = POM_DESCRIPTION
+
+    siteUrl = POM_SCM_URL
+    gitUrl = POM_SCM_CONNECTION
+
+    libraryVersion = VERSION_NAME
+
+    developerId = POM_DEVELOPER_ID
+    developerName = POM_DEVELOPER_NAME
+    developerEmail = POM_DEVELOPER_EMAIL
+
+    licenseName = POM_LICENCE_NAME
+    licenseUrl = POM_LICENCE_URL
+    allLicenses = ["Apache-2.0"]
+}
+
 android {
-    compileSdkVersion 21
-    buildToolsVersion "21.1.2"
+    compileSdkVersion 23
+    buildToolsVersion "23.0.1"
 
     defaultConfig {
         minSdkVersion 10
-        targetSdkVersion 21
-        versionName "1.1.0"
+        targetSdkVersion 23
+        versionName VERSION_NAME
     }
     buildTypes {
         release {
@@ -17,41 +43,11 @@ android {
     }
 }
 
-/**
- * Copies aar file to library folder
- */
-task copyLibraryFile(type: Copy) {
-    from "${buildDir}/outputs/aar/${project.name}-release.aar"
-    into "${rootDir}/library/"
-    rename ("${project.name}-release.aar", "${project.name}-${android.defaultConfig.versionName}.aar")
-}
-
-/**
- * builds library .aar file and copies it to library folder
- */
-task buildLibrary(dependsOn: ['assemble', 'copyLibraryFile']) {
-}
-
-apply plugin: 'maven'
-task generatePom << {
-    pom {
-        project {
-            version android.defaultConfig.versionName
-            groupId "com.doodeec.utils"
-            packaging "aar"
-            licenses {
-                license {
-                    name 'The Apache Software License, Version 2.0'
-                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    distribution 'repo'
-                }
-            }
-        }
-    }.writeTo("$buildDir/${project.name}-${android.defaultConfig.versionName}.pom")
-}
-
 dependencies {
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'org.mockito:mockito-core:2.0.5-beta'
     testCompile 'junit:junit:4.12'
 }
+
+apply from: '../install.gradle'
+apply from: '../bintray.gradle'

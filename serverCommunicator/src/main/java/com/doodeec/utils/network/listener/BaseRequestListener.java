@@ -1,9 +1,9 @@
-package com.doodeec.scom.listener;
+package com.doodeec.utils.network.listener;
 
-import com.doodeec.scom.RequestError;
+import com.doodeec.utils.network.RequestError;
 
 /**
- * Base generic Request listener called by {@link com.doodeec.scom.BaseServerRequest}
+ * Base generic Request listener called by {@link com.doodeec.utils.network.BaseServerRequest}
  *
  * @author dusan.bartos
  */
