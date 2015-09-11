@@ -2,7 +2,10 @@ package com.doodeec.utils.network;
 
 import android.os.AsyncTask;
 import android.os.Build;
+<<<<<<< HEAD
 import android.util.Log;
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
 
 import com.doodeec.utils.network.listener.BaseRequestListener;
 
@@ -42,12 +45,15 @@ public abstract class BaseServerRequest<ReturnType> extends
     public static final int PROGRESS_DISCONNECTING = 90;
     public static final int PROGRESS_DONE = 100;
 
+<<<<<<< HEAD
     private static boolean sDebugEnabled = false;
 
     public static void enableDebug(boolean enable) {
         sDebugEnabled = enable;
     }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
     /**
      * Post data to add to request body (payload)
      */
@@ -119,10 +125,13 @@ public abstract class BaseServerRequest<ReturnType> extends
         mListener = listener;
 
         initHeaders();
+<<<<<<< HEAD
 
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "New request created. type=" + type.getValue());
         }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
     }
 
     /**
@@ -206,14 +215,19 @@ public abstract class BaseServerRequest<ReturnType> extends
         try {
             url = new URL(params[0]);
         } catch (MalformedURLException e) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             //Invalid URL
+=======
+            //IO exception
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             mCommunicatorResponse.setError(new RequestError("Cannot read target URL", params[0]));
             return mCommunicatorResponse;
         }
 
+<<<<<<< HEAD
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Request URL parsed. url=" + url.toString());
         }
@@ -224,15 +238,23 @@ public abstract class BaseServerRequest<ReturnType> extends
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
+=======
+        try {
+            connection = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             //IO exception
             mCommunicatorResponse.setError(new RequestError("Cannot open connection", url.toString()));
             return mCommunicatorResponse;
         }
 
+<<<<<<< HEAD
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Connection opened. url=" + url.toString());
         }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
         // progress 10%
         publishProgress(PROGRESS_OPENED);
 
@@ -254,27 +276,36 @@ public abstract class BaseServerRequest<ReturnType> extends
 
         // set additional request headers
         if (mRequestHeaders != null) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 Log.d(getClass().getSimpleName(), "Setting custom headers. headers=" + mRequestHeaders.toString());
             }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             for (String property : mRequestHeaders.keySet()) {
                 connection.setRequestProperty(property, mRequestHeaders.get(property));
             }
         }
 
+<<<<<<< HEAD
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Headers set. url=" + url.toString());
         }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
         // set connection type
         // since RequestType is enum, exception should never occur
         try {
             connection.setRequestMethod(mType.getValue());
         } catch (ProtocolException e) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             throw new IllegalArgumentException("Request type has invalid value");
         }
 
@@ -299,9 +330,12 @@ public abstract class BaseServerRequest<ReturnType> extends
             }
 
             int status = connection.getResponseCode();
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 Log.d(getClass().getSimpleName(), "Connection status code " + status + ". url=" + url.toString());
             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             mCommunicatorResponse.setStatusCode(status);
             // progress 40%
             publishProgress(PROGRESS_RESPONSE_CODE);
@@ -309,16 +343,22 @@ public abstract class BaseServerRequest<ReturnType> extends
             //try to hook interceptor
             if (mInterceptor != null && mInterceptor.onProcessStatus(status)) {
                 //response intercepted
+<<<<<<< HEAD
                 if (sDebugEnabled) {
                     Log.d(getClass().getSimpleName(), "Response intercepted. url=" + url.toString());
                 }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
                 mCommunicatorResponse.setError(RequestError.INTERCEPT);
                 return mCommunicatorResponse;
             }
 
+<<<<<<< HEAD
             // free interceptor, no longer needed
             mInterceptor = null;
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             if (status != HttpURLConnection.HTTP_OK) {
                 connection.getResponseMessage();
                 mCommunicatorResponse.setError(new RequestError("Server returned status code " + status, url.toString()));
@@ -337,10 +377,13 @@ public abstract class BaseServerRequest<ReturnType> extends
 
             InputStream inputStream = null;
             try {
+<<<<<<< HEAD
                 if (sDebugEnabled) {
                     Log.d(getClass().getSimpleName(), "Reading input stream. url=" + url.toString());
                 }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
                 inputStream = connection.getInputStream();
                 // progress 60%
                 publishProgress(PROGRESS_CONTENT);
@@ -358,9 +401,12 @@ public abstract class BaseServerRequest<ReturnType> extends
                 if (contentEncodings != null) {
                     for (String header : contentEncodings) {
                         if (header.equalsIgnoreCase("gzip")) {
+<<<<<<< HEAD
                             if (sDebugEnabled) {
                                 Log.d(getClass().getSimpleName(), "Decoding GZIPped stream. url=" + url.toString());
                             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
                             inputStream = new GZIPInputStream(inputStream);
                             break;
                         }
@@ -370,9 +416,12 @@ public abstract class BaseServerRequest<ReturnType> extends
                 // progress 70%
                 publishProgress(PROGRESS_INPUT_STREAM);
 
+<<<<<<< HEAD
                 if (sDebugEnabled) {
                     Log.d(getClass().getSimpleName(), "Processing input stream. url=" + url.toString());
                 }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
                 mCommunicatorResponse.setData(
                         processInputStream(connection.getContentType(), inputStream));
             } finally {
@@ -390,23 +439,32 @@ public abstract class BaseServerRequest<ReturnType> extends
                 return mCommunicatorResponse;
             }
         } catch (ConnectException e) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             // connect exception, server not responding
             mCommunicatorResponse.setError(new RequestError("Server not responding", url.toString()));
             return mCommunicatorResponse;
         } catch (SocketTimeoutException e) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             // timeout exception
             mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
             return mCommunicatorResponse;
         } catch (IOException e) {
+<<<<<<< HEAD
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
             // io exception
             mCommunicatorResponse.setError(new RequestError(e, url.toString()));
             return mCommunicatorResponse;
@@ -418,10 +476,13 @@ public abstract class BaseServerRequest<ReturnType> extends
             publishProgress(PROGRESS_DONE);
         }
 
+<<<<<<< HEAD
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Request complete, returning to UI thread. url=" + url.toString());
         }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
         return mCommunicatorResponse;
     }
 
@@ -464,10 +525,13 @@ public abstract class BaseServerRequest<ReturnType> extends
      * @return asyncTask
      */
     public BaseServerRequest executeInParallel(String... params) {
+<<<<<<< HEAD
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Executing request in pool. url=" + params[0]);
         }
 
+=======
+>>>>>>> parent of 5674e78... 1.2.0 javadoc
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             return (BaseServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
         } else {
