@@ -6,7 +6,15 @@ Simple server communicator for RESTful data source
 
 
 ### Description
-Library module for communicating with your REST server
+Library module for communicating with your REST server.
+The library provides classes for communicating with REST API, while requests are fully maintainable
+(can be cloned to be executed repeatedly, can be cancelled while executing, can be used with custom headers
+and custom interceptor) from your app.
+
+GZIP is supported by default.
+
+Interceptors can be used for i.e. middleware authentication (handling of expired tokens while preserving
+the relative context of the original request)
 
 ### Usage
 Import library in your application. Either as a `.aar` file in your `libs` folder
@@ -14,7 +22,7 @@ or as a maven dependency.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.2.1'
+        compile 'com.doodeec.utils:serverCommunicator:1.2.1@aar'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.
