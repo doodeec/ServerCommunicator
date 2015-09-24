@@ -19,12 +19,17 @@ import java.util.Arrays;
  * @see com.doodeec.utils.network.listener.JSONRequestListener
  * @see RequestError
  */
+@SuppressWarnings("unused")
 public class ImageServerRequest extends BaseServerRequest<Bitmap> {
 
     // response types
     private static final String[] IMAGE_RESPONSE = new String[]{"image/png", "image/jpg", "image/jpeg"};
 
     public ImageServerRequest(RequestType type, BaseRequestListener<Bitmap> listener) {
+        super(type, listener);
+    }
+
+    private ImageServerRequest(BaseRequestListener listener, RequestType type) {
         super(type, listener);
     }
 
@@ -56,7 +61,7 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
 
     @Override
     public ImageServerRequest cloneRequest() {
-        @SuppressWarnings("unchecked") ImageServerRequest clonedRequest = new ImageServerRequest(mType, mListener);
+        ImageServerRequest clonedRequest = new ImageServerRequest(mListener, mType);
         clonedRequest.mTimeout = mTimeout;
         clonedRequest.mReadTimeout = mReadTimeout;
         clonedRequest.mRequestHeaders = mRequestHeaders;

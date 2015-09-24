@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.doodeec.utils.network.listener.BaseRequestListener;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,6 +48,12 @@ public abstract class BaseServerRequest<ReturnType> extends
     public static void enableDebug(boolean enable) {
         sDebugEnabled = enable;
     }
+
+    /**
+     * Maximum number of retries when EOFException occurs
+     */
+    private static final int MAX_RETRIES = 3;
+    private int mRetryCount = 0;
 
     /**
      * Post data to add to request body (payload)
@@ -403,11 +410,34 @@ public abstract class BaseServerRequest<ReturnType> extends
             // timeout exception
             mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
             return mCommunicatorResponse;
+        } catch (EOFException e) {
+            // known bug when POST request is thrown with EOFException sometimes
+            // retry the request a few times
+            if (sDebugEnabled) {
+                Log.i(getClass().getSimpleName(), "EOFException occured, retrying to send a request");
+            }
+            if (mRetryCount < MAX_RETRIES) {
+                mRetryCount++;
+                return doInBackground(params);
+            } else {
+                if (sDebugEnabled) {
+                    e.printStackTrace();
+                }
+                mCommunicatorResponse.setError(new RequestError(e, url.toString()));
+                return mCommunicatorResponse;
+            }
         } catch (IOException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             // io exception
+            mCommunicatorResponse.setError(new RequestError(e, url.toString()));
+            return mCommunicatorResponse;
+        } catch (Exception e) {
+            if (sDebugEnabled) {
+                e.printStackTrace();
+            }
+            // other exception
             mCommunicatorResponse.setError(new RequestError(e, url.toString()));
             return mCommunicatorResponse;
         } finally {
