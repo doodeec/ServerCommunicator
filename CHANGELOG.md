@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.0
+
+* internal GSON support
+
 ## 1.2.2
 
 * internal handling of EOFException during POST request

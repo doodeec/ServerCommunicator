@@ -23,14 +23,14 @@ or as a maven dependency.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.2.2@aar'
+        compile 'com.doodeec.utils:serverCommunicator:1.3.0@aar'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.
 
-    ServerRequest request = new ServerRequest(BaseServerRequest.RequestType.GET, new JSONRequestListener() {
+    ServerRequest request = new ServerRequest(BaseServerRequest.RequestType.GET, new GSONRequestListener<MyObject>() {
         @Override
-        public void onSuccess(JSONObject object) {
+        public void onSuccess(MyObject object) {
             ...
         }
 
@@ -48,7 +48,7 @@ In your code, you can then use it via `ServerRequest` and `ImageServerRequest` c
         public void onProgress(Integer progress) {
             ...
         }
-    });
+    }, MyObject.class);
     request.executeInParallel(url);
 
 Both ServerRequest and ImageServerRequest return `CancellableServerRequest` which is an interface

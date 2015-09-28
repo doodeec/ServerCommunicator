@@ -25,12 +25,16 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
     // response types
     private static final String[] IMAGE_RESPONSE = new String[]{"image/png", "image/jpg", "image/jpeg"};
 
-    public ImageServerRequest(RequestType type, BaseRequestListener<Bitmap> listener) {
-        super(type, listener);
-    }
+    /**
+     * Request listener
+     *
+     * @see com.doodeec.utils.network.listener.JSONRequestListener
+     */
+    protected BaseRequestListener<Bitmap> mListener;
 
-    private ImageServerRequest(BaseRequestListener listener, RequestType type) {
-        super(type, listener);
+    public ImageServerRequest(RequestType type, BaseRequestListener<Bitmap> listener) {
+        super(type);
+        mListener = listener;
     }
 
     @Override
@@ -61,10 +65,20 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
 
     @Override
     public ImageServerRequest cloneRequest() {
-        ImageServerRequest clonedRequest = new ImageServerRequest(mListener, mType);
+        ImageServerRequest clonedRequest = new ImageServerRequest(mType, mListener);
         clonedRequest.mTimeout = mTimeout;
         clonedRequest.mReadTimeout = mReadTimeout;
         clonedRequest.mRequestHeaders = mRequestHeaders;
         return clonedRequest;
+    }
+
+    @Override
+    protected void onProgressUpdate(Integer... values) {
+        mListener.onProgress(values[0]);
+    }
+
+    @Override
+    protected void onCancelled() {
+        mListener.onCancelled();
     }
 }

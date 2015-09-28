@@ -4,8 +4,6 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.util.Log;
 
-import com.doodeec.utils.network.listener.BaseRequestListener;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +41,7 @@ public abstract class BaseServerRequest<ReturnType> extends
     public static final int PROGRESS_DISCONNECTING = 90;
     public static final int PROGRESS_DONE = 100;
 
-    private static boolean sDebugEnabled = false;
+    protected static boolean sDebugEnabled = false;
 
     public static void enableDebug(boolean enable) {
         sDebugEnabled = enable;
@@ -90,13 +88,6 @@ public abstract class BaseServerRequest<ReturnType> extends
     protected RequestType mType;
 
     /**
-     * Request listener
-     *
-     * @see com.doodeec.utils.network.listener.JSONRequestListener
-     */
-    protected BaseRequestListener mListener;
-
-    /**
      * Request interceptor
      *
      * @see ResponseInterceptor
@@ -119,11 +110,9 @@ public abstract class BaseServerRequest<ReturnType> extends
      * {@link com.doodeec.utils.network.RequestType#DELETE}
      *
      * @param type     request type
-     * @param listener listener
      */
-    protected BaseServerRequest(RequestType type, BaseRequestListener listener) {
+    protected BaseServerRequest(RequestType type) {
         mType = type;
-        mListener = listener;
 
         initHeaders();
 
@@ -137,12 +126,11 @@ public abstract class BaseServerRequest<ReturnType> extends
      *
      * @param type     request type (typically {@link com.doodeec.utils.network.RequestType#POST}) for this constructor
      * @param data     post data
-     * @param listener listener
      *
-     * @see #BaseServerRequest(com.doodeec.utils.network.RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
+     * @see #BaseServerRequest(com.doodeec.utils.network.RequestType)
      */
-    protected BaseServerRequest(RequestType type, String data, BaseRequestListener listener) {
-        this(type, listener);
+    protected BaseServerRequest(RequestType type, String data) {
+        this(type);
         mPostData = data;
     }
 
@@ -197,7 +185,7 @@ public abstract class BaseServerRequest<ReturnType> extends
      * Can be used (overridden in request implementation) to define default headers for the
      * overridden class
      *
-     * @see #BaseServerRequest(RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
+     * @see #BaseServerRequest(RequestType)
      */
     protected void initHeaders() {
     }
@@ -464,16 +452,6 @@ public abstract class BaseServerRequest<ReturnType> extends
      * @return generic object instance
      */
     protected abstract ReturnType processInputStream(String contentType, InputStream inputStream);
-
-    @Override
-    protected void onProgressUpdate(Integer... values) {
-        mListener.onProgress(values[0]);
-    }
-
-    @Override
-    protected void onCancelled() {
-        mListener.onCancelled();
-    }
 
     @Override
     protected abstract void onPostExecute(CommunicatorResponse<ReturnType> returnType);

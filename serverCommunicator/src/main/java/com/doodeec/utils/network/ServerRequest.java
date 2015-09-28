@@ -3,7 +3,11 @@ package com.doodeec.utils.network;
 import android.util.Log;
 
 import com.doodeec.utils.network.listener.BaseRequestListener;
+import com.doodeec.utils.network.listener.GSONRequestListener;
 import com.doodeec.utils.network.listener.JSONRequestListener;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -28,38 +32,56 @@ import java.nio.charset.UnsupportedCharsetException;
  * @see com.doodeec.utils.network.RequestError
  */
 @SuppressWarnings("unused")
-public class ServerRequest extends BaseServerRequest<String> {
+public class ServerRequest<LT> extends BaseServerRequest<String> {
 
     // response headers
     private static final String REQ_CONTENT_TYPE_KEY = "Content-Type";
     private static final String REQ_CONTENT_TYPE_VALUE = "application/json";
 
     // default response charset
-    private static Charset mCharset = Charset.forName("UTF-8");
+    private static Charset sCharset = Charset.forName("UTF-8");
 
-    /**
-     * Creates server request of given type
-     *
-     * @see com.doodeec.utils.network.BaseServerRequest#BaseServerRequest(com.doodeec.utils.network.RequestType, com.doodeec.utils.network.listener.BaseRequestListener)
-     */
-    public ServerRequest(RequestType type, JSONRequestListener listener) {
-        super(type, listener);
+    private static Gson sGsonConverter = new GsonBuilder().create();
+
+    public static void setGsonConverter(Gson gsonConverter) {
+        sGsonConverter = gsonConverter;
     }
 
     /**
-     * Creates server request with POST data (payload)
+     * Request listener
      *
-     * @see com.doodeec.utils.network.BaseServerRequest#BaseServerRequest(com.doodeec.utils.network.RequestType, String, com.doodeec.utils.network.listener.BaseRequestListener)
+     * @see com.doodeec.utils.network.listener.JSONRequestListener
      */
-    public ServerRequest(RequestType type, String data, JSONRequestListener listener) {
-        super(type, data, listener);
+    protected BaseRequestListener<LT> mListener;
+    /**
+     * Class type of GSON response
+     */
+    private Class<LT> mGsonClass;
+    /**
+     * Flag if GSON converter should be used
+     */
+    private boolean mUseGson = false;
+
+    public ServerRequest(RequestType type, GSONRequestListener<LT> listener, Class<LT> cls) {
+        this(type, listener);
+        mGsonClass = cls;
+        mUseGson = true;
     }
 
-    /**
-     * Helper for cloning request
-     */
-    private ServerRequest(RequestType type, String data, BaseRequestListener listener) {
-        super(type, data, listener);
+    public ServerRequest(RequestType type, String data, GSONRequestListener<LT> listener, Class<LT> cls) {
+        this(type, data, listener);
+        mGsonClass = cls;
+        mUseGson = true;
+    }
+
+    public ServerRequest(RequestType type, BaseRequestListener<LT> listener) {
+        super(type);
+        mListener = listener;
+    }
+
+    public ServerRequest(RequestType type, String data, BaseRequestListener<LT> listener) {
+        super(type, data);
+        mListener = listener;
     }
 
     /**
@@ -85,7 +107,7 @@ public class ServerRequest extends BaseServerRequest<String> {
      */
     public static void setResponseCharset(String canonicalName) throws IllegalCharsetNameException,
             UnsupportedCharsetException {
-        mCharset = Charset.forName(canonicalName);
+        sCharset = Charset.forName(canonicalName);
     }
 
     @Override
@@ -96,7 +118,7 @@ public class ServerRequest extends BaseServerRequest<String> {
     @Override
     protected String processInputStream(String contentType, InputStream inputStream) {
         try {
-            InputStreamReader streamReader = new InputStreamReader(inputStream, mCharset.name());
+            InputStreamReader streamReader = new InputStreamReader(inputStream, sCharset.name());
             StringBuilder sb = new StringBuilder();
             char[] buf = new char[2048];
             int charsRead;
@@ -114,26 +136,39 @@ public class ServerRequest extends BaseServerRequest<String> {
     protected void onPostExecute(CommunicatorResponse<String> response) {
         if (response.isIntercepted()) {
             //do nothing
-            Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+            if (sDebugEnabled) {
+                Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+            }
         } else if (response.hasError()) {
             mListener.onError(response.getError());
         } else if (response.getData() != null) {
-            // POST/PUT can have empty response, but 200 response code
-            if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
-                    (response.getData().equals("") || response.getData().equals("OK"))) {
-                ((JSONRequestListener) mListener).onSuccess();
-            } else {
+            if (mUseGson) {
                 try {
-                    // propagate json object to listener
-                    ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
-                } catch (JSONException e) {
-                    // not a json object
+                    mListener.onSuccess(sGsonConverter.fromJson(response.getData(), mGsonClass));
+                } catch (JsonSyntaxException e) {
+                    if (sDebugEnabled) {
+                        e.printStackTrace();
+                    }
+                    mListener.onError(new RequestError(e.getMessage(), null));
+                }
+            } else {
+                // POST/PUT can have empty response, but 200 response code
+                if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
+                        (response.getData().equals("") || response.getData().equals("OK"))) {
+                    ((JSONRequestListener) mListener).onSuccess();
+                } else {
                     try {
-                        // propagate json array to listener
-                        ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
-                    } catch (JSONException arrayException) {
-                        // not a json array, not a json object
-                        mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", null));
+                        // propagate json object to listener
+                        ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
+                    } catch (JSONException e) {
+                        // not a json object
+                        try {
+                            // propagate json array to listener
+                            ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
+                        } catch (JSONException arrayException) {
+                            // not a json array, not a json object
+                            mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", null));
+                        }
                     }
                 }
             }
@@ -143,11 +178,21 @@ public class ServerRequest extends BaseServerRequest<String> {
     }
 
     @Override
-    public ServerRequest cloneRequest() {
-        ServerRequest clonedRequest = new ServerRequest(mType, mPostData, mListener);
+    public ServerRequest<LT> cloneRequest() {
+        ServerRequest<LT> clonedRequest = new ServerRequest<>(mType, mPostData, mListener);
         clonedRequest.mTimeout = mTimeout;
         clonedRequest.mReadTimeout = mReadTimeout;
         clonedRequest.mRequestHeaders = mRequestHeaders;
         return clonedRequest;
+    }
+
+    @Override
+    protected void onProgressUpdate(Integer... values) {
+        mListener.onProgress(values[0]);
+    }
+
+    @Override
+    protected void onCancelled() {
+        mListener.onCancelled();
     }
 }
