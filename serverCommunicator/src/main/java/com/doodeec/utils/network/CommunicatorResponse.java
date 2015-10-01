@@ -12,6 +12,7 @@ public class CommunicatorResponse<ReturnType> {
     private boolean mHasError = false;
     private int mStatusCode;
     private ReturnType mResponseData;
+    private String mUrl;
     private RequestError mError;
 
     protected CommunicatorResponse() {
@@ -22,6 +23,10 @@ public class CommunicatorResponse<ReturnType> {
         mError = requestError;
         mHasError = requestError != null;
         mIntercepted = requestError != null && requestError.equals(RequestError.INTERCEPT);
+    }
+
+    protected void setUrl(String url) {
+        mUrl = url;
     }
 
     protected void setData(ReturnType data) {
@@ -42,6 +47,10 @@ public class CommunicatorResponse<ReturnType> {
 
     public int getStatusCode() {
         return mStatusCode;
+    }
+
+    public String getUrl() {
+        return mUrl;
     }
 
     public ReturnType getData() {

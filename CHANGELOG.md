@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.3.1
+
+* improved handling of class cast exceptions
+* CommunicatorResponse object now contains URL of the request
+
 ## 1.3.0
 
 * internal GSON support

@@ -209,6 +209,7 @@ public abstract class BaseServerRequest<ReturnType> extends
             return mCommunicatorResponse;
         }
 
+        mCommunicatorResponse.setUrl(url.toString());
         if (sDebugEnabled) {
             Log.d(getClass().getSimpleName(), "Request URL parsed. url=" + url.toString());
         }

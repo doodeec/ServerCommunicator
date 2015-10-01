@@ -149,31 +149,38 @@ public class ServerRequest<LT> extends BaseServerRequest<String> {
                     if (sDebugEnabled) {
                         e.printStackTrace();
                     }
-                    mListener.onError(new RequestError(e.getMessage(), null));
+                    mListener.onError(new RequestError(e.getMessage(), response.getUrl()));
                 }
             } else {
-                // POST/PUT can have empty response, but 200 response code
-                if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
-                        (response.getData().equals("") || response.getData().equals("OK"))) {
-                    ((JSONRequestListener) mListener).onSuccess();
-                } else {
-                    try {
-                        // propagate json object to listener
-                        ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
-                    } catch (JSONException e) {
-                        // not a json object
+                try {
+                    // POST/PUT can have empty response, but 200 response code
+                    if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
+                            (response.getData().equals("") || response.getData().equals("OK"))) {
+                        ((JSONRequestListener) mListener).onSuccess();
+                    } else {
                         try {
-                            // propagate json array to listener
-                            ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
-                        } catch (JSONException arrayException) {
-                            // not a json array, not a json object
-                            mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", null));
+                            // propagate json object to listener
+                            ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
+                        } catch (JSONException e) {
+                            // not a json object
+                            try {
+                                // propagate json array to listener
+                                ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
+                            } catch (JSONException arrayException) {
+                                // not a json array, not a json object
+                                mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", response.getUrl()));
+                            }
                         }
                     }
+                } catch (ClassCastException e) {
+                    if (sDebugEnabled) {
+                        e.printStackTrace();
+                    }
+                    mListener.onError(new RequestError(e.getMessage(), response.getUrl()));
                 }
             }
         } else {
-            mListener.onError(new RequestError("Response empty", null));
+            mListener.onError(new RequestError("Response empty", response.getUrl()));
         }
     }
 
