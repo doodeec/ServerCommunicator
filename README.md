@@ -12,23 +12,19 @@ The library provides classes for communicating with REST API, while requests are
 (can be cloned to be executed repeatedly, can be cancelled while executing, can be used with custom headers
 and custom interceptor) from your app.
 
-GZIP is supported by default.
 
-Interceptors can be used for i.e. middleware authentication (handling of expired tokens while preserving
-the relative context of the original request)
-
-### Usage
+### Basic Usage
 Import library in your application. Either as a `.aar` file in your `libs` folder
 or as a maven dependency.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.3.1@aar'
+        compile 'com.doodeec.utils:serverCommunicator:1.3.2@aar'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.
 
-    ServerRequest request = new ServerRequest(BaseServerRequest.RequestType.GET, new GSONRequestListener<MyObject>() {
+    ServerRequest request = new ServerRequest(BaseServerRequest.RequestType.GET, new BaseRequestListener<MyObject>() {
         @Override
         public void onSuccess(MyObject object) {
             ...
@@ -55,6 +51,7 @@ Both ServerRequest and ImageServerRequest return `CancellableServerRequest` whic
 wrapper around AsyncTask `cancel(boolean)` method.
 
 
+### Request Headers
 You can also use custom request headers with `setHeaders` method.<br/>
 **BEWARE** that this method will add map parameter to existing map. If you want to clear the map,
 use `clearHeaders` method before setting your custom headers.
@@ -72,6 +69,40 @@ any of these:
 - cp852
 - iso-8859-1
 - iso-8859-2
+
+### GZIP
+GZIP is supported by default.
+
+
+### Response Interceptor
+Interceptors can be used for i.e. middleware authentication (handling of expired tokens while preserving
+the relative context of the original request)
+
+    request.setInterceptor(new ResponseInterceptor() {
+            @Override
+            public boolean onProcessStatus(int i) {
+                // status code 401
+                if (i == HttpURLConnection.HTTP_UNAUTHORIZED) {
+                    //authorize
+                    return true;    // return true to intercept
+                }
+                return false;       // return false to continue
+            }
+        });
+
+
+### Debugging
+To enable debug logs, just use this method (typically in Application object when app is starting)
+
+    ServerRequest.enableDebug(BuildConfig.DEBUG);
+
+
+### Tips
+When using with large data-stream, consider optimizing buffer size. The default size is 2kB
+
+    ServerRequest.setBufferSize(4096);
+
+
 
 ### License
 Released under Apache v2.0 License

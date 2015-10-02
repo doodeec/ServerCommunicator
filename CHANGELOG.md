@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.3.2
+
+* UI thread optimization
+* using GSON as default, JSONObject/JSONArray response can be used via GSON alternatives JsonObject/JsonArray (lowercase)
+* possibility to change default buffer size for response stream
+* CommunicatorResponse object now contains original stream for simpler debugging
+
 ## 1.3.1
 
 * improved handling of class cast exceptions

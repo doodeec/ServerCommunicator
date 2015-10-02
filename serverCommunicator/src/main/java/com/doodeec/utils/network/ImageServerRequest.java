@@ -20,7 +20,7 @@ import java.util.Arrays;
  * @see RequestError
  */
 @SuppressWarnings("unused")
-public class ImageServerRequest extends BaseServerRequest<Bitmap> {
+public class ImageServerRequest extends BaseServerRequest<Bitmap, Bitmap> {
 
     // response types
     private static final String[] IMAGE_RESPONSE = new String[]{"image/png", "image/jpg", "image/jpeg"};
@@ -48,10 +48,17 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
     }
 
     @Override
+    protected Bitmap instantiateStream(Bitmap bitmap) {
+        return bitmap;
+    }
+
+    @Override
     protected void onPostExecute(CommunicatorResponse<Bitmap> response) {
         if (response.isIntercepted()) {
             //do nothing
-            Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+            if (sDebugEnabled) {
+                Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
+            }
         } else if (response.hasError()) {
             mListener.onError(response.getError());
         } else if (response.getData() != null) {
@@ -59,7 +66,7 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap> {
             //noinspection unchecked
             mListener.onSuccess(response.getData());
         } else {
-            mListener.onError(new RequestError("Response bitmap empty", null));
+            mListener.onError(new RequestError("Response bitmap empty", response.getUrl()));
         }
     }
 

@@ -3,15 +3,9 @@ package com.doodeec.utils.network;
 import android.util.Log;
 
 import com.doodeec.utils.network.listener.BaseRequestListener;
-import com.doodeec.utils.network.listener.GSONRequestListener;
-import com.doodeec.utils.network.listener.JSONRequestListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,56 +26,89 @@ import java.nio.charset.UnsupportedCharsetException;
  * @see com.doodeec.utils.network.RequestError
  */
 @SuppressWarnings("unused")
-public class ServerRequest<LT> extends BaseServerRequest<String> {
+public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
 
     // response headers
     private static final String REQ_CONTENT_TYPE_KEY = "Content-Type";
     private static final String REQ_CONTENT_TYPE_VALUE = "application/json";
 
-    // default response charset
+    /**
+     * response charset
+     *
+     * @see #setResponseCharset(String)
+     */
     private static Charset sCharset = Charset.forName("UTF-8");
 
+    /**
+     * GSON converter
+     * uses default converter by default, can be changed via {@link #setGsonConverter(Gson)}
+     */
     private static Gson sGsonConverter = new GsonBuilder().create();
 
+    /**
+     * Buffer size used for reading input stream from response
+     *
+     * @see #setBufferSize(int)
+     */
+    private static int sCharBufferSize = 2048;
+
+    /**
+     * Sets custom GSON converter
+     *
+     * @param gsonConverter custom converter
+     */
     public static void setGsonConverter(Gson gsonConverter) {
+        if (gsonConverter == null) return;
         sGsonConverter = gsonConverter;
     }
 
     /**
-     * Request listener
+     * Sets buffer size
+     *
+     * @param size size of the buffer
+     */
+    public static void setBufferSize(int size) {
+        sCharBufferSize = size;
+    }
+
+    /**
+     * Response listener
      *
      * @see com.doodeec.utils.network.listener.JSONRequestListener
      */
     protected BaseRequestListener<LT> mListener;
+
     /**
-     * Class type of GSON response
+     * Class of the response
+     * Used in GSON parser
      */
     private Class<LT> mGsonClass;
+
     /**
-     * Flag if GSON converter should be used
+     * Constructs ServerRequest
+     *
+     * @param type     type of request {@link RequestType}
+     * @param listener response listener
+     * @param cls      class of response object
      */
-    private boolean mUseGson = false;
-
-    public ServerRequest(RequestType type, GSONRequestListener<LT> listener, Class<LT> cls) {
-        this(type, listener);
-        mGsonClass = cls;
-        mUseGson = true;
-    }
-
-    public ServerRequest(RequestType type, String data, GSONRequestListener<LT> listener, Class<LT> cls) {
-        this(type, data, listener);
-        mGsonClass = cls;
-        mUseGson = true;
-    }
-
-    public ServerRequest(RequestType type, BaseRequestListener<LT> listener) {
+    public ServerRequest(RequestType type, BaseRequestListener<LT> listener, Class<LT> cls) {
         super(type);
         mListener = listener;
+        mGsonClass = cls;
     }
 
-    public ServerRequest(RequestType type, String data, BaseRequestListener<LT> listener) {
+    /**
+     * Constructs ServerRequest with payload data
+     *
+     * @param type     type of request {@link RequestType}
+     * @param data     payload data
+     * @param listener response listener
+     * @param cls      class of response object
+     */
+    public ServerRequest(RequestType type, String data, BaseRequestListener<LT> listener, Class<LT> cls) {
         super(type, data);
         mListener = listener;
+        mGsonClass = cls;
     }
 
     /**
@@ -120,9 +147,9 @@ public class ServerRequest<LT> extends BaseServerRequest<String> {
         try {
             InputStreamReader streamReader = new InputStreamReader(inputStream, sCharset.name());
             StringBuilder sb = new StringBuilder();
-            char[] buf = new char[2048];
+            char[] buf = new char[sCharBufferSize];
             int charsRead;
-            while ((charsRead = streamReader.read(buf, 0, 2048)) > 0) {
+            while ((charsRead = streamReader.read(buf, 0, sCharBufferSize)) > 0) {
                 sb.append(buf, 0, charsRead);
             }
 
@@ -133,7 +160,12 @@ public class ServerRequest<LT> extends BaseServerRequest<String> {
     }
 
     @Override
-    protected void onPostExecute(CommunicatorResponse<String> response) {
+    protected LT instantiateStream(String s) throws JsonSyntaxException {
+        return sGsonConverter.fromJson(s, mGsonClass);
+    }
+
+    @Override
+    protected void onPostExecute(final CommunicatorResponse<LT> response) {
         if (response.isIntercepted()) {
             //do nothing
             if (sDebugEnabled) {
@@ -142,43 +174,7 @@ public class ServerRequest<LT> extends BaseServerRequest<String> {
         } else if (response.hasError()) {
             mListener.onError(response.getError());
         } else if (response.getData() != null) {
-            if (mUseGson) {
-                try {
-                    mListener.onSuccess(sGsonConverter.fromJson(response.getData(), mGsonClass));
-                } catch (JsonSyntaxException e) {
-                    if (sDebugEnabled) {
-                        e.printStackTrace();
-                    }
-                    mListener.onError(new RequestError(e.getMessage(), response.getUrl()));
-                }
-            } else {
-                try {
-                    // POST/PUT can have empty response, but 200 response code
-                    if ((mType.equals(RequestType.POST) || mType.equals(RequestType.PUT)) &&
-                            (response.getData().equals("") || response.getData().equals("OK"))) {
-                        ((JSONRequestListener) mListener).onSuccess();
-                    } else {
-                        try {
-                            // propagate json object to listener
-                            ((JSONRequestListener) mListener).onSuccess(new JSONObject(response.getData()));
-                        } catch (JSONException e) {
-                            // not a json object
-                            try {
-                                // propagate json array to listener
-                                ((JSONRequestListener) mListener).onSuccess(new JSONArray(response.getData()));
-                            } catch (JSONException arrayException) {
-                                // not a json array, not a json object
-                                mListener.onError(new RequestError("Response cannot be parsed to neither JSONObject or JSONArray", response.getUrl()));
-                            }
-                        }
-                    }
-                } catch (ClassCastException e) {
-                    if (sDebugEnabled) {
-                        e.printStackTrace();
-                    }
-                    mListener.onError(new RequestError(e.getMessage(), response.getUrl()));
-                }
-            }
+            mListener.onSuccess(response.getData());
         } else {
             mListener.onError(new RequestError("Response empty", response.getUrl()));
         }
@@ -186,7 +182,7 @@ public class ServerRequest<LT> extends BaseServerRequest<String> {
 
     @Override
     public ServerRequest<LT> cloneRequest() {
-        ServerRequest<LT> clonedRequest = new ServerRequest<>(mType, mPostData, mListener);
+        ServerRequest<LT> clonedRequest = new ServerRequest<>(mType, mPostData, mListener, mGsonClass);
         clonedRequest.mTimeout = mTimeout;
         clonedRequest.mReadTimeout = mReadTimeout;
         clonedRequest.mRequestHeaders = mRequestHeaders;

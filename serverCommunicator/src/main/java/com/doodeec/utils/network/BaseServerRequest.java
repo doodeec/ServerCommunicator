@@ -26,7 +26,7 @@ import java.util.zip.GZIPInputStream;
  * @author dusan.bartos
  */
 @SuppressWarnings("unused")
-public abstract class BaseServerRequest<ReturnType> extends
+public abstract class BaseServerRequest<ReturnType, StreamType> extends
         AsyncTask<String, Integer, CommunicatorResponse<ReturnType>> implements CancellableServerRequest {
 
     // asyncTask progress
@@ -101,6 +101,8 @@ public abstract class BaseServerRequest<ReturnType> extends
      */
     protected CommunicatorResponse<ReturnType> mCommunicatorResponse = new CommunicatorResponse<>();
 
+    protected StreamType mOriginalResponse;
+
     /**
      * Constructs basic Server Request without body data (i.e. GET request)
      * Available types are:
@@ -109,7 +111,7 @@ public abstract class BaseServerRequest<ReturnType> extends
      * {@link com.doodeec.utils.network.RequestType#PUT}
      * {@link com.doodeec.utils.network.RequestType#DELETE}
      *
-     * @param type     request type
+     * @param type request type
      */
     protected BaseServerRequest(RequestType type) {
         mType = type;
@@ -124,8 +126,8 @@ public abstract class BaseServerRequest<ReturnType> extends
     /**
      * Constructs Server Request with POST payload data
      *
-     * @param type     request type (typically {@link com.doodeec.utils.network.RequestType#POST}) for this constructor
-     * @param data     post data
+     * @param type request type (typically {@link com.doodeec.utils.network.RequestType#POST}) for this constructor
+     * @param data post data
      *
      * @see #BaseServerRequest(com.doodeec.utils.network.RequestType)
      */
@@ -369,8 +371,9 @@ public abstract class BaseServerRequest<ReturnType> extends
                 if (sDebugEnabled) {
                     Log.d(getClass().getSimpleName(), "Processing input stream. url=" + url.toString());
                 }
-                mCommunicatorResponse.setData(
-                        processInputStream(connection.getContentType(), inputStream));
+
+                mOriginalResponse = processInputStream(connection.getContentType(), inputStream);
+                mCommunicatorResponse.setData(instantiateStream(mOriginalResponse));
             } finally {
                 // progress 80%
                 publishProgress(PROGRESS_CONNECTION_CLOSE);
@@ -415,18 +418,11 @@ public abstract class BaseServerRequest<ReturnType> extends
                 mCommunicatorResponse.setError(new RequestError(e, url.toString()));
                 return mCommunicatorResponse;
             }
-        } catch (IOException e) {
-            if (sDebugEnabled) {
-                e.printStackTrace();
-            }
-            // io exception
-            mCommunicatorResponse.setError(new RequestError(e, url.toString()));
-            return mCommunicatorResponse;
         } catch (Exception e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
-            // other exception
+            // IOException, JSONSyntaxException, Other exceptions
             mCommunicatorResponse.setError(new RequestError(e, url.toString()));
             return mCommunicatorResponse;
         } finally {
@@ -452,7 +448,9 @@ public abstract class BaseServerRequest<ReturnType> extends
      *
      * @return generic object instance
      */
-    protected abstract ReturnType processInputStream(String contentType, InputStream inputStream);
+    protected abstract StreamType processInputStream(String contentType, InputStream inputStream);
+
+    protected abstract ReturnType instantiateStream(StreamType streamType);
 
     @Override
     protected abstract void onPostExecute(CommunicatorResponse<ReturnType> returnType);
@@ -462,7 +460,7 @@ public abstract class BaseServerRequest<ReturnType> extends
      *
      * @return cloned instance
      */
-    public abstract BaseServerRequest<ReturnType> cloneRequest();
+    public abstract BaseServerRequest<ReturnType, StreamType> cloneRequest();
 
     /**
      * Executes asyncTask in parallel with other tasks
