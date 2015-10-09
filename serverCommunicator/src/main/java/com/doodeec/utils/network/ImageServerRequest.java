@@ -63,7 +63,6 @@ public class ImageServerRequest extends BaseServerRequest<Bitmap, Bitmap> {
             mListener.onError(response.getError());
         } else if (response.getData() != null) {
             // POST can have empty response, but 200 response code
-            //noinspection unchecked
             mListener.onSuccess(response.getData());
         } else {
             mListener.onError(new RequestError("Response bitmap empty", response.getUrl()));

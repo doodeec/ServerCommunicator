@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.3
+
+* fix for empty responses (status code 200 without response body)
+
 ## 1.3.2
 
 * UI thread optimization
