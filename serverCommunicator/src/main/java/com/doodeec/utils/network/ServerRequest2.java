@@ -1,7 +1,5 @@
 package com.doodeec.utils.network;
 
-import android.util.Log;
-
 import com.doodeec.utils.network.listener.BaseRequestListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -16,17 +14,15 @@ import java.nio.charset.UnsupportedCharsetException;
 
 /**
  * Server request
- * {@link android.os.AsyncTask} wrapper around {@link java.net.HttpURLConnection}
- * Can be executed with {@link #THREAD_POOL_EXECUTOR} to evaluate requests in parallel
  *
  * @author dusan.bartos
- * @see com.doodeec.utils.network.listener.BaseRequestListener
+ * @see BaseRequestListener
  * @see com.doodeec.utils.network.listener.JSONRequestListener
- * @see com.doodeec.utils.network.ErrorType
- * @see com.doodeec.utils.network.RequestError
+ * @see ErrorType
+ * @see RequestError
  */
 @SuppressWarnings("unused")
-public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
+public class ServerRequest2<LT> extends NetworkRequest<LT, String> {
 
     // response headers
     private static final String REQ_CONTENT_TYPE_KEY = "Content-Type";
@@ -91,7 +87,7 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
      * @param listener response listener
      * @param cls      class of response object
      */
-    public ServerRequest(RequestType type, BaseRequestListener<LT> listener, Class<LT> cls) {
+    public ServerRequest2(RequestType type, BaseRequestListener<LT> listener, Class<LT> cls) {
         super(type);
         mListener = listener;
         mGsonClass = cls;
@@ -105,7 +101,7 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
      * @param listener response listener
      * @param cls      class of response object
      */
-    public ServerRequest(RequestType type, String data, BaseRequestListener<LT> listener, Class<LT> cls) {
+    public ServerRequest2(RequestType type, String data, BaseRequestListener<LT> listener, Class<LT> cls) {
         super(type, data);
         mListener = listener;
         mGsonClass = cls;
@@ -165,24 +161,18 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
     }
 
     @Override
-    protected void onPostExecute(CommunicatorResponse<LT> response) {
-        if (response.isIntercepted()) {
-            //do nothing
-            if (sDebugEnabled) {
-                Log.d(getClass().getSimpleName(), "Response intercepted. Not proceeding to response listener");
-            }
-        } else if (response.hasError()) {
-            mListener.onError(response.getError());
-        } else if (response.getData() != null) {
-            mListener.onSuccess(response.getData());
-        } else {
-            mListener.onError(new RequestError("Response empty", response.getUrl()));
-        }
+    protected void onRequestResolved(CommunicatorResponse<LT> response) {
+        mListener.onSuccess(response.getData());
     }
 
     @Override
-    public ServerRequest<LT> cloneRequest() {
-        ServerRequest<LT> clonedRequest = new ServerRequest<>(mType, mPostData, mListener, mGsonClass);
+    protected void onError(RequestError error) {
+        mListener.onError(error);
+    }
+
+    @Override
+    public ServerRequest2<LT> cloneRequest() {
+        ServerRequest2<LT> clonedRequest = new ServerRequest2<>(mType, mPostData, mListener, mGsonClass);
         clonedRequest.mTimeout = mTimeout;
         clonedRequest.mReadTimeout = mReadTimeout;
         clonedRequest.mRequestHeaders = mRequestHeaders;
@@ -190,8 +180,8 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
     }
 
     @Override
-    protected void onProgressUpdate(Integer... values) {
-        mListener.onProgress(values[0]);
+    protected void onProgressUpdate(int progress) {
+        mListener.onProgress(progress);
     }
 
     @Override

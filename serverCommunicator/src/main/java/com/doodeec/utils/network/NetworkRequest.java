@@ -1,7 +1,9 @@
 package com.doodeec.utils.network;
 
-import android.os.AsyncTask;
-import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.annotation.UiThread;
+import android.support.annotation.WorkerThread;
 import android.util.Log;
 
 import java.io.EOFException;
@@ -20,16 +22,13 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Abstract base which is common for both {@link com.doodeec.utils.network.ServerRequest}
- * and {@link com.doodeec.utils.network.ImageServerRequest}
- *
- * @author dusan.bartos
+ * @author Dusan Bartos
  */
-@SuppressWarnings("unused")
-public abstract class BaseServerRequest<ReturnType, StreamType> extends
-        AsyncTask<String, Integer, CommunicatorResponse<ReturnType>> implements CancellableServerRequest {
+public abstract class NetworkRequest<ReturnType, StreamType> {
 
-    // asyncTask progress
+    private static final String TAG = NetworkRequest.class.getSimpleName();
+
+    // progress
     public static final int PROGRESS_IDLE = 0;
     public static final int PROGRESS_OPENED = 10;
     public static final int PROGRESS_CONNECTED = 20;
@@ -101,7 +100,20 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
      */
     protected CommunicatorResponse<ReturnType> mCommunicatorResponse = new CommunicatorResponse<>();
 
+    protected URL mUrl;
+
     protected StreamType mOriginalResponse;
+
+    protected Thread mBackgroundThread;
+
+    private int mProgress = PROGRESS_IDLE;
+
+    private final Runnable mRunTrigger = new Runnable() {
+        @Override
+        public void run() {
+            startConnection();
+        }
+    };
 
     /**
      * Constructs basic Server Request without body data (i.e. GET request)
@@ -113,7 +125,7 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
      *
      * @param type request type
      */
-    protected BaseServerRequest(RequestType type) {
+    protected NetworkRequest(RequestType type) {
         mType = type;
 
         initHeaders();
@@ -129,9 +141,9 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
      * @param type request type (typically {@link com.doodeec.utils.network.RequestType#POST}) for this constructor
      * @param data post data
      *
-     * @see #BaseServerRequest(com.doodeec.utils.network.RequestType)
+     * @see #NetworkRequest(com.doodeec.utils.network.RequestType)
      */
-    protected BaseServerRequest(RequestType type, String data) {
+    protected NetworkRequest(RequestType type, String data) {
         this(type);
         mPostData = data;
     }
@@ -183,62 +195,132 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         mRequestHeaders.clear();
     }
 
-    /**
-     * Can be used (overridden in request implementation) to define default headers for the
-     * overridden class
-     *
-     * @see #BaseServerRequest(RequestType)
-     */
-    protected void initHeaders() {
+    public void cancel() {
+        if (mBackgroundThread != null && !mBackgroundThread.isInterrupted()) {
+            mBackgroundThread.interrupt();
+        }
     }
 
-    @Override
-    protected CommunicatorResponse<ReturnType> doInBackground(String... params) {
-        URL url;
-        HttpURLConnection connection;
-
-        // progress 0%
-        publishProgress(PROGRESS_IDLE);
-
+    public void execute(String... params) {
         try {
-            url = new URL(params[0]);
+            URL url = new URL(params[0]);
+            //TODO
+            internalExecute(url, null);
         } catch (MalformedURLException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
-            //Invalid URL
-            mCommunicatorResponse.setError(new RequestError("Cannot read target URL", params[0]));
-            return mCommunicatorResponse;
+            Log.e(TAG, "Invalid URL");
+            //TODO process error
         }
+    }
 
-        mCommunicatorResponse.setUrl(url.toString());
+    /**
+     * Processes input stream to create defined generic object instance
+     *
+     * @param contentType content type from response headers
+     * @param inputStream input stream to be processed
+     *
+     * @return generic object instance
+     */
+    protected abstract StreamType processInputStream(String contentType, InputStream inputStream);
+
+    protected abstract ReturnType instantiateStream(StreamType streamType);
+
+    @UiThread
+    protected abstract void onRequestResolved(CommunicatorResponse<ReturnType> response);
+
+    /**
+     * Clones request parameters to the new instance
+     *
+     * @return cloned instance
+     */
+    public abstract NetworkRequest<ReturnType, StreamType> cloneRequest();
+
+    /**
+     * Can be used (overridden in request implementation) to define default headers for the
+     * overridden class
+     *
+     * @see #NetworkRequest(RequestType)
+     */
+    protected void initHeaders() {
+    }
+
+    protected final void internalExecute(URL url, String postData) {
+        mUrl = url;
+        executeInBackground();
+    }
+
+    private void executeInBackground() {
+        mBackgroundThread = new Thread(mRunTrigger);
+        mBackgroundThread.setName(TAG);
+        mBackgroundThread.start();
+    }
+
+    @WorkerThread
+    private void publishProgress(int progress) {
+        mProgress = progress;
+        new Handler(Looper.getMainLooper())
+                .post(new Runnable() {
+                    @Override
+                    public void run() {
+                        onProgressUpdate(mProgress);
+                    }
+                });
+    }
+
+    @WorkerThread
+    private void invokeError(RequestError error) {
+        mCommunicatorResponse.setError(error);
+        new Handler(Looper.getMainLooper())
+                .post(new Runnable() {
+                    @Override
+                    public void run() {
+                        onError(mCommunicatorResponse.getError());
+                    }
+                });
+    }
+
+    @UiThread
+    protected void onProgressUpdate(int progress) {
+    }
+
+    @UiThread
+    protected void onError(RequestError error) {
+    }
+
+    @WorkerThread
+    protected void onCancelled() {
+        mCommunicatorResponse.setCancelled(true);
         if (sDebugEnabled) {
-            Log.d(getClass().getSimpleName(), "Request URL parsed. url=" + url.toString());
+            Log.w(getClass().getSimpleName(), "Connection cancelled. url=" + mUrl.toString());
+        }
+    }
+
+    @WorkerThread
+    private void startConnection() {
+        HttpURLConnection connection;
+
+        mCommunicatorResponse.setUrl(mUrl.toString());
+
+        if (mBackgroundThread.isInterrupted()) {
+            onCancelled();
+            return;
         }
 
         try {
-            connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) mUrl.openConnection();
         } catch (IOException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             //IO exception
-            mCommunicatorResponse.setError(new RequestError("Cannot open connection", url.toString()));
-            return mCommunicatorResponse;
-        }
-
-        // Checking for cancelled flag in major thread breakpoints
-        if (isCancelled()) {
-            connection.disconnect();
-            mCommunicatorResponse.setCancelled(true);
-            if (sDebugEnabled) {
-                Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-            }
-            return mCommunicatorResponse;
+            invokeError(new RequestError("Cannot open connection", mUrl.toString()));
+            return;
         }
 
         if (sDebugEnabled) {
-            Log.d(getClass().getSimpleName(), "Connection opened. url=" + url.toString());
+            Log.d(getClass().getSimpleName(), "Connection opened. url=" + mUrl.toString());
         }
 
         // progress 10%
@@ -272,7 +354,7 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         }
 
         if (sDebugEnabled) {
-            Log.d(getClass().getSimpleName(), "Headers set. url=" + url.toString());
+            Log.d(getClass().getSimpleName(), "Headers set. url=" + mUrl.toString());
         }
 
         // set connection type
@@ -300,18 +382,14 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             }
 
             // Checking for cancelled flag in major thread breakpoints
-            if (isCancelled()) {
-                connection.disconnect();
-                mCommunicatorResponse.setCancelled(true);
-                if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                }
-                return mCommunicatorResponse;
+            if (mBackgroundThread.isInterrupted()) {
+                onCancelled();
+                return;
             }
 
             int status = connection.getResponseCode();
             if (sDebugEnabled) {
-                Log.d(getClass().getSimpleName(), "Connection status code " + status + ". url=" + url.toString());
+                Log.d(getClass().getSimpleName(), "Connection status code " + status + ". url=" + mUrl.toString());
             }
             mCommunicatorResponse.setStatusCode(status);
             // progress 40%
@@ -321,10 +399,10 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             if (mInterceptor != null && mInterceptor.onProcessStatus(status)) {
                 //response intercepted
                 if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Response intercepted. url=" + url.toString());
+                    Log.d(getClass().getSimpleName(), "Response intercepted. url=" + mUrl.toString());
                 }
                 mCommunicatorResponse.setError(RequestError.INTERCEPT);
-                return mCommunicatorResponse;
+                return;
             }
 
             // free interceptor, no longer needed
@@ -332,18 +410,14 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
 
             if (status != HttpURLConnection.HTTP_OK) {
                 connection.getResponseMessage();
-                mCommunicatorResponse.setError(new RequestError("Server returned status code " + status, url.toString()));
-                return mCommunicatorResponse;
+                invokeError(new RequestError("Server returned status code " + status, mUrl.toString()));
+                return;
             }
 
             // Checking for cancelled flag in major thread breakpoints
-            if (isCancelled()) {
-                connection.disconnect();
-                mCommunicatorResponse.setCancelled(true);
-                if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                }
-                return mCommunicatorResponse;
+            if (mBackgroundThread.isInterrupted()) {
+                onCancelled();
+                return;
             }
 
             // progress 50%
@@ -352,7 +426,7 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             InputStream inputStream = null;
             try {
                 if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Reading input stream. url=" + url.toString());
+                    Log.d(getClass().getSimpleName(), "Reading input stream. url=" + mUrl.toString());
                 }
 
                 inputStream = connection.getInputStream();
@@ -360,13 +434,9 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
                 publishProgress(PROGRESS_CONTENT);
 
                 // Checking for cancelled flag in major thread breakpoints
-                if (isCancelled()) {
-                    connection.disconnect();
-                    mCommunicatorResponse.setCancelled(true);
-                    if (sDebugEnabled) {
-                        Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                    }
-                    return mCommunicatorResponse;
+                if (mBackgroundThread.isInterrupted()) {
+                    onCancelled();
+                    return;
                 }
 
                 // handle gzipped input stream
@@ -376,7 +446,7 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
                     for (String header : contentEncodings) {
                         if (header.equalsIgnoreCase("gzip")) {
                             if (sDebugEnabled) {
-                                Log.d(getClass().getSimpleName(), "Decoding GZIPped stream. url=" + url.toString());
+                                Log.d(getClass().getSimpleName(), "Decoding GZIPped stream. url=" + mUrl.toString());
                             }
                             inputStream = new GZIPInputStream(inputStream);
                             break;
@@ -388,29 +458,21 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
                 publishProgress(PROGRESS_INPUT_STREAM);
 
                 if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Processing input stream. url=" + url.toString());
+                    Log.d(getClass().getSimpleName(), "Processing input stream. url=" + mUrl.toString());
                 }
 
                 // Checking for cancelled flag in major thread breakpoints
-                if (isCancelled()) {
-                    connection.disconnect();
-                    mCommunicatorResponse.setCancelled(true);
-                    if (sDebugEnabled) {
-                        Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                    }
-                    return mCommunicatorResponse;
+                if (mBackgroundThread.isInterrupted()) {
+                    onCancelled();
+                    return;
                 }
 
                 mOriginalResponse = processInputStream(connection.getContentType(), inputStream);
 
                 // Checking for cancelled flag in major thread breakpoints
-                if (isCancelled()) {
-                    connection.disconnect();
-                    mCommunicatorResponse.setCancelled(true);
-                    if (sDebugEnabled) {
-                        Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                    }
-                    return mCommunicatorResponse;
+                if (mBackgroundThread.isInterrupted()) {
+                    onCancelled();
+                    return;
                 }
                 mCommunicatorResponse.setData(instantiateStream(mOriginalResponse));
             } finally {
@@ -422,28 +484,24 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             }
 
             // Checking for cancelled flag in major thread breakpoints
-            if (isCancelled()) {
-                connection.disconnect();
-                mCommunicatorResponse.setCancelled(true);
-                if (sDebugEnabled) {
-                    Log.d(getClass().getSimpleName(), "Connection cancelled. url=" + url.toString());
-                }
-                return mCommunicatorResponse;
+            if (mBackgroundThread.isInterrupted()) {
+                onCancelled();
+                return;
             }
         } catch (ConnectException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             // connect exception, server not responding
-            mCommunicatorResponse.setError(new RequestError("Server not responding", url.toString()));
-            return mCommunicatorResponse;
+            invokeError(new RequestError("Server not responding", mUrl.toString()));
+            return;
         } catch (SocketTimeoutException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             // timeout exception
-            mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
-            return mCommunicatorResponse;
+            invokeError(new RequestError("Connection timeout", mUrl.toString()));
+            return;
         } catch (EOFException e) {
             // known bug when POST request is thrown with EOFException sometimes
             // retry the request a few times
@@ -452,21 +510,22 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             }
             if (mRetryCount < MAX_RETRIES) {
                 mRetryCount++;
-                return doInBackground(params);
+                startConnection();
+                return;
             } else {
                 if (sDebugEnabled) {
                     e.printStackTrace();
                 }
-                mCommunicatorResponse.setError(new RequestError(e, url.toString()));
-                return mCommunicatorResponse;
+                invokeError(new RequestError(e, mUrl.toString()));
+                return;
             }
         } catch (Exception e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
             // IOException, JSONSyntaxException, Other exceptions
-            mCommunicatorResponse.setError(new RequestError(e, url.toString()));
-            return mCommunicatorResponse;
+            invokeError(new RequestError(e, mUrl.toString()));
+            return;
         } finally {
             // progress 90%
             publishProgress(PROGRESS_DISCONNECTING);
@@ -476,51 +535,16 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         }
 
         if (sDebugEnabled) {
-            Log.d(getClass().getSimpleName(), "Request complete, returning to UI thread. url=" + url.toString());
+            Log.d(getClass().getSimpleName(), "Request complete, returning to UI thread. url=" + mUrl.toString());
         }
 
-        return mCommunicatorResponse;
-    }
-
-    /**
-     * Processes input stream to create defined generic object instance
-     *
-     * @param contentType content type from response headers
-     * @param inputStream input stream to be processed
-     *
-     * @return generic object instance
-     */
-    protected abstract StreamType processInputStream(String contentType, InputStream inputStream);
-
-    protected abstract ReturnType instantiateStream(StreamType streamType);
-
-    @Override
-    protected abstract void onPostExecute(CommunicatorResponse<ReturnType> returnType);
-
-    /**
-     * Clones request parameters to the new instance
-     *
-     * @return cloned instance
-     */
-    public abstract BaseServerRequest<ReturnType, StreamType> cloneRequest();
-
-    /**
-     * Executes asyncTask in parallel with other tasks
-     * Wrapper for {@link android.os.AsyncTask#THREAD_POOL_EXECUTOR}
-     *
-     * @param params params
-     *
-     * @return asyncTask
-     */
-    public BaseServerRequest executeInParallel(String... params) {
-        if (sDebugEnabled) {
-            Log.d(getClass().getSimpleName(), "Executing request in pool. url=" + params[0]);
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            return (BaseServerRequest) executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
-        } else {
-            return (BaseServerRequest) execute(params);
-        }
+        //return to UI thread
+        new Handler(Looper.getMainLooper())
+                .post(new Runnable() {
+                    @Override
+                    public void run() {
+                        onRequestResolved(mCommunicatorResponse);
+                    }
+                });
     }
 }
