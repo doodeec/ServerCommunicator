@@ -317,9 +317,9 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             // free interceptor, no longer needed
             mInterceptor = null;
 
-            if (status != HttpURLConnection.HTTP_OK) {
+            if (!isStatusOk(status)) {
                 connection.getResponseMessage();
-                mCommunicatorResponse.setError(new RequestError("Server returned status code " + status, url.toString()));
+                mCommunicatorResponse.setError(new RequestError(status, url.toString()));
                 return mCommunicatorResponse;
             }
 
@@ -461,6 +461,10 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
      * @return cloned instance
      */
     public abstract BaseServerRequest<ReturnType, StreamType> cloneRequest();
+
+    protected boolean isStatusOk(int status) {
+        return (status >= HttpURLConnection.HTTP_OK && status < HttpURLConnection.HTTP_MULT_CHOICE);
+    }
 
     /**
      * Executes asyncTask in parallel with other tasks

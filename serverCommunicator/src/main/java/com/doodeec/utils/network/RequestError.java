@@ -55,6 +55,11 @@ public class RequestError {
         mType = ErrorType.Custom;
     }
 
+    protected RequestError(int code, String url) {
+        mRequestUrl = url;
+        mType = ErrorType.forStatusCode(code);
+    }
+
     /**
      * Gets {@link com.doodeec.utils.network.ErrorType} of this error
      *

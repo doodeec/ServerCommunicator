@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.4
+
+* more error types to determine some common status response codes
+
 ## 1.3.3
 
 * fix for empty responses (status code 200 without response body)

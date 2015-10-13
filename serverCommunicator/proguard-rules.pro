@@ -30,3 +30,4 @@
 
 # Gson specific classes
 -keep class sun.misc.Unsafe { *; }
+-dontwarn com.google.gson.**

@@ -19,7 +19,7 @@ or as a maven dependency.
 
     dependencies {
         ...
-        compile 'com.doodeec.utils:serverCommunicator:1.3.2@aar'
+        compile 'com.doodeec.utils:serverCommunicator:1.3.4@aar'
     }
 
 In your code, you can then use it via `ServerRequest` and `ImageServerRequest` classes.
