@@ -11,13 +11,13 @@ public enum RequestType {
     PUT("PUT"),
     DELETE("DELETE");
 
-    private String value;
+    String mValue;
 
-    private RequestType(String value) {
-        this.value = value;
+    RequestType(String value) {
+        this.mValue = value;
     }
 
     public String getValue() {
-        return value;
+        return mValue;
     }
 }

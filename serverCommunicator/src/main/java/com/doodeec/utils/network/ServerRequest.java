@@ -10,7 +10,6 @@ import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
@@ -75,7 +74,7 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
     /**
      * Response listener
      *
-     * @see com.doodeec.utils.network.listener.JSONRequestListener
+     * @see com.doodeec.utils.network.listener.BaseRequestListener
      */
     protected BaseRequestListener<LT> mListener;
 
@@ -176,7 +175,7 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
             mListener.onError(response.getError());
         } else if (response.getData() != null) {
             mListener.onSuccess(response.getData());
-        } else if (isResponseOk(response.getStatusCode())) {
+        } else if (isStatusOk(response.getStatusCode())) {
             mListener.onSuccess(null);
         } else {
             mListener.onError(new RequestError("Response empty", response.getUrl()));
@@ -200,9 +199,5 @@ public class ServerRequest<LT> extends BaseServerRequest<LT, String> {
     @Override
     protected void onCancelled() {
         mListener.onCancelled();
-    }
-
-    boolean isResponseOk(int statusCode) {
-        return (statusCode >= HttpURLConnection.HTTP_OK && statusCode < HttpURLConnection.HTTP_MULT_CHOICE);
     }
 }

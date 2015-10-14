@@ -1,1 +1,1 @@
-include ':serverCommunicator'
+include ':serverCommunicator', ':sampleservercommunicator'
