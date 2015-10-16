@@ -14,10 +14,15 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 
 /**
  * Abstract base which is common for both {@link com.doodeec.utils.network.ServerRequest}
@@ -43,6 +48,26 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
 
     protected static boolean sDebugEnabled = false;
 
+    protected static SSLContext sSSLContext;
+
+    static {
+        try {
+            sSSLContext = SSLContext.getInstance("TLS");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("TLS Algorithm not found. This should never occur");
+        }
+    }
+
+    /**
+     * Provides a way to setup SSL context with custom key store
+     * For more information, see documentation for {@link HttpsURLConnection}
+     *
+     * @return SSL context used for https requests
+     */
+    public static SSLContext getSSLContext() {
+        return sSSLContext;
+    }
+
     public static void enableDebug(boolean enable) {
         sDebugEnabled = enable;
     }
@@ -50,8 +75,16 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
     /**
      * Maximum number of retries when EOFException occurs
      */
-    private static final int MAX_RETRIES = 3;
-    private int mRetryCount = 0;
+    private static final int MAX_RETRIES_EOF = 3;
+    /**
+     * Maximum number of retries when SocketTimeout occurs
+     * This happens sometimes with first request, but once request is sent again, timeout does
+     * not occur. This is kind of a hack solution, because it doesn't really solve the timeout,
+     * but it will try to send the same request once again
+     */
+    private static final int MAX_RETRIES_SOCKET = 1;
+    private int mRetryCountEOF = 0;
+    private int mRetryCountSocketTimeout = 0;
 
     /**
      * Post data to add to request body (payload)
@@ -217,7 +250,13 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         }
 
         try {
-            connection = (HttpURLConnection) url.openConnection();
+            URLConnection _connection = url.openConnection();
+            if (_connection instanceof HttpsURLConnection) {
+                ((HttpsURLConnection) _connection).setSSLSocketFactory(sSSLContext.getSocketFactory());
+                connection = (HttpsURLConnection) _connection;
+            } else {
+                connection = (HttpURLConnection) _connection;
+            }
         } catch (IOException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
@@ -392,9 +431,17 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             if (sDebugEnabled) {
                 e.printStackTrace();
             }
-            // connect exception, server not responding
-            mCommunicatorResponse.setError(new RequestError("Server not responding", url.toString()));
-            return mCommunicatorResponse;
+
+            if (mRetryCountSocketTimeout < MAX_RETRIES_SOCKET) {
+                mRetryCountSocketTimeout++;
+                return doInBackground(params);
+            } else {
+                if (sDebugEnabled) {
+                    e.printStackTrace();
+                }
+                mCommunicatorResponse.setError(new RequestError(e, url.toString()));
+                return mCommunicatorResponse;
+            }
         } catch (SocketTimeoutException e) {
             if (sDebugEnabled) {
                 e.printStackTrace();
@@ -406,10 +453,11 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             // known bug when POST request is thrown with EOFException sometimes
             // retry the request a few times
             if (sDebugEnabled) {
-                Log.i(getClass().getSimpleName(), "EOFException occured, retrying to send a request");
+                Log.i(getClass().getSimpleName(), "EOFException occurred, retrying to send a request");
             }
-            if (mRetryCount < MAX_RETRIES) {
-                mRetryCount++;
+
+            if (mRetryCountEOF < MAX_RETRIES_EOF) {
+                mRetryCountEOF++;
                 return doInBackground(params);
             } else {
                 if (sDebugEnabled) {
