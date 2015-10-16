@@ -27,10 +27,8 @@
 -keepattributes Signature
 # For using GSON @Expose annotation
 -keepattributes *Annotation*
--keep class com.google.gson.JsonSyntaxException
--keep class com.google.gson.Gson
 
 # Gson specific classes
 -keep class sun.misc.Unsafe { *; }
 
--dontwarn com.google.gson.**
+-dontwarn com.google.**

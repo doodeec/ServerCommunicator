@@ -432,6 +432,14 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
                 e.printStackTrace();
             }
 
+            // timeout exception
+            mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
+            return mCommunicatorResponse;
+        } catch (SocketTimeoutException e) {
+            if (sDebugEnabled) {
+                Log.i(getClass().getSimpleName(), "SocketTimeoutException occurred, retrying to send a request");
+            }
+
             if (mRetryCountSocketTimeout < MAX_RETRIES_SOCKET) {
                 mRetryCountSocketTimeout++;
                 return doInBackground(params);
@@ -442,13 +450,6 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
                 mCommunicatorResponse.setError(new RequestError(e, url.toString()));
                 return mCommunicatorResponse;
             }
-        } catch (SocketTimeoutException e) {
-            if (sDebugEnabled) {
-                e.printStackTrace();
-            }
-            // timeout exception
-            mCommunicatorResponse.setError(new RequestError("Connection timeout", url.toString()));
-            return mCommunicatorResponse;
         } catch (EOFException e) {
             // known bug when POST request is thrown with EOFException sometimes
             // retry the request a few times
@@ -474,6 +475,9 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
             mCommunicatorResponse.setError(new RequestError(e, url.toString()));
             return mCommunicatorResponse;
         } finally {
+            if (sDebugEnabled) {
+                Log.d(getClass().getSimpleName(), "Disconnecting");
+            }
             // progress 90%
             publishProgress(PROGRESS_DISCONNECTING);
             connection.disconnect();
