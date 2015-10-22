@@ -15,14 +15,17 @@ import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Abstract base which is common for both {@link com.doodeec.utils.network.ServerRequest}
@@ -49,12 +52,18 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
     protected static boolean sDebugEnabled = false;
 
     protected static SSLContext sSSLContext;
+    protected static HostnameVerifier sHostNameVerifier;
 
     static {
         try {
             sSSLContext = SSLContext.getInstance("TLS");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("TLS Algorithm not found. This should never occur");
+            sSSLContext.init(null, null, null);
+            sHostNameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
+        } catch (KeyManagementException | NoSuchAlgorithmException e) {
+            if (sDebugEnabled) {
+                e.printStackTrace();
+            }
+            throw new IllegalStateException("Exception initializing SSL context", e);
         }
     }
 
@@ -66,6 +75,13 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
      */
     public static SSLContext getSSLContext() {
         return sSSLContext;
+    }
+
+    /**
+     * Provides a way to set Hostname verifier for SSL certificates
+     */
+    public static void setHostNameVerifier(HostnameVerifier hostNameVerifier) {
+        sHostNameVerifier = hostNameVerifier;
     }
 
     public static void enableDebug(boolean enable) {
@@ -252,8 +268,13 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         try {
             URLConnection _connection = url.openConnection();
             if (_connection instanceof HttpsURLConnection) {
-                ((HttpsURLConnection) _connection).setSSLSocketFactory(sSSLContext.getSocketFactory());
-                connection = (HttpsURLConnection) _connection;
+                SSLSocketFactory NoSSLv3Factory = new NoSSLv3SocketFactory(sSSLContext.getSocketFactory());
+                HttpsURLConnection httpsConnection = (HttpsURLConnection) _connection;
+                httpsConnection.setSSLSocketFactory(NoSSLv3Factory);
+                if (sHostNameVerifier != null) {
+                    httpsConnection.setHostnameVerifier(sHostNameVerifier);
+                }
+                connection = httpsConnection;
             } else {
                 connection = (HttpURLConnection) _connection;
             }
