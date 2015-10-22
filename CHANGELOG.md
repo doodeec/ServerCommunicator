@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.3.5
+
+* SSL context access (for custom trust store configuration)
+* hostname verifier configuration support
+
 ## 1.3.4
 
 * more error types to determine some common status response codes

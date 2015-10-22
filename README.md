@@ -70,6 +70,14 @@ any of these:
 - iso-8859-1
 - iso-8859-2
 
+
+### SSL
+For custom SSL configuration, it is possible to retrieve SSL context defined for HTTPS connections.
+You can use static method `getSSLContext` for this purpose.
+Another SSL configuration might involve modifying the HostnameVerifier, you can easily set your
+own via `setHostNameVerifier(HostnameVerifier)` method.
+
+
 ### GZIP
 GZIP is supported by default.
 
