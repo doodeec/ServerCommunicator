@@ -268,6 +268,7 @@ public abstract class BaseServerRequest<ReturnType, StreamType> extends
         try {
             URLConnection _connection = url.openConnection();
             if (_connection instanceof HttpsURLConnection) {
+                // this class removes SSLv3 from supported protocols
                 SSLSocketFactory NoSSLv3Factory = new NoSSLv3SocketFactory(sSSLContext.getSocketFactory());
                 HttpsURLConnection httpsConnection = (HttpsURLConnection) _connection;
                 httpsConnection.setSSLSocketFactory(NoSSLv3Factory);
