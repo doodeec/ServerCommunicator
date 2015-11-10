@@ -98,7 +98,7 @@ public class FileServerRequest extends BaseServerRequest<File, File> {
             int charsRead;
             int position = 0;
             while ((charsRead = inputStream.read(buf, 0, sCharBufferSize)) > 0) {
-                fos.write(buf, position, charsRead);
+                fos.write(buf, 0, charsRead);
                 position += charsRead;
             }
 

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.6
+
+* fixed reading files in FileServerRequest
+
 ## 1.3.5
 
 * SSL context access (for custom trust store configuration)
